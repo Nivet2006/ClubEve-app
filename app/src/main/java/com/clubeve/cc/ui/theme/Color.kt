@@ -2,36 +2,45 @@ package com.clubeve.cc.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Backgrounds
-val BackgroundPrimary  = Color(0xFF0A0A0F)
-val BackgroundSurface  = Color(0xFF13131A)
-val BackgroundElevated = Color(0xFF1C1C28)
+// ── Core B&W palette ──────────────────────────────────────────────────────────
+val Black         = Color(0xFF000000)
+val White         = Color(0xFFFFFFFF)
+val OffWhite      = Color(0xFFF5F5F5)
+val LightGray     = Color(0xFFE8E8E8)
+val MidGray       = Color(0xFF9E9E9E)
+val DarkGray      = Color(0xFF3A3A3A)
 
-// Accent
-val AccentPrimary  = Color(0xFF7C3AED)
-val AccentPressed  = Color(0xFF6D28D9)
-val AccentGlow     = Color(0x267C3AED)
+// ── Backgrounds ───────────────────────────────────────────────────────────────
+val BackgroundPrimary  = White
+val BackgroundSurface  = OffWhite
+val BackgroundElevated = LightGray
 
-// Status
-val StatusSuccess = Color(0xFF10B981)
-val StatusWarning = Color(0xFFF59E0B)
-val StatusError   = Color(0xFFEF4444)
+// ── Text ──────────────────────────────────────────────────────────────────────
+val TextPrimary   = Black
+val TextSecondary = DarkGray
+val TextMuted     = MidGray
 
-// Text
-val TextPrimary   = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextMuted     = Color(0xFF475569)
+// ── Borders ───────────────────────────────────────────────────────────────────
+val BorderDefault = Color(0xFFD0D0D0)
+val BorderSubtle  = Color(0xFFEEEEEE)
+val Divider       = Color(0xFFE0E0E0)
 
-// Borders
-val BorderSubtle  = Color(0x0AFFFFFF)
-val BorderDefault = Color(0x14FFFFFF)
-val Divider       = Color(0xFF1E293B)
+// ── Accent (still black) ──────────────────────────────────────────────────────
+val AccentPrimary    = Black
+val AccentGlow       = Color(0x14000000)
+val PrimaryContainer = Color(0xFFE8E8E8)
 
-// Legacy (kept for LoginScreen compatibility)
-val DarkBackground = BackgroundPrimary
-val SurfaceColor   = BackgroundSurface
-val GlassWhite     = Color(0x1AFFFFFF)
-val GlassBorder    = Color(0x33FFFFFF)
-val PrimaryColor   = AccentPrimary
-val SecondaryColor = Color(0xFF03DAC6)
-val ErrorColor     = StatusError
+// ── Status ────────────────────────────────────────────────────────────────────
+val StatusSuccess = Color(0xFF1A7A3C)   // dark green — readable on white
+val StatusWarning = Color(0xFF8A5A00)   // dark amber
+val StatusError   = Color(0xFFB00020)   // dark red
+
+// ── Legacy aliases (keep old references compiling) ────────────────────────────
+val AccentPressed   = DarkGray
+val AccentSecondary = StatusSuccess
+val DarkBackground  = Black
+val SurfaceColor    = OffWhite
+val GlassWhite      = Color(0x1A000000)
+val GlassBorder     = Color(0x33000000)
+val PrimaryColor    = Black
+val ErrorColor      = StatusError
