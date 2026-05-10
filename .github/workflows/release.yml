@@ -82,9 +82,11 @@ jobs:
       # ── 7. Rename APK to include version tag ───────────────────────────────
       - name: Rename APK
         run: |
-          VERSION="${{ github.ref_name }}"          # e.g. v1.2.0
-          mv app/build/outputs/apk/release/app-release.apk \
-             app/build/outputs/apk/release/clubeve-cc-${VERSION}.apk
+          VERSION="${{ github.ref_name }}"
+          APK_SRC=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          echo "Found APK: $APK_SRC"
+          mv "$APK_SRC" app/build/outputs/apk/release/ClubEve-CC-${VERSION}.apk
+          echo "APK renamed to: ClubEve-CC-${VERSION}.apk"
 
       # ── 8. Create GitHub Release and upload APK (only on v* tags) ──────────
       - name: Create GitHub Release
@@ -93,7 +95,13 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: "ClubEve CC ${{ github.ref_name }}"
-          generate_release_notes: true          # auto-generates changelog from commits
-          files: app/build/outputs/apk/release/clubeve-cc-${{ github.ref_name }}.apk
+          body: |
+            ## ClubEve CC ${{ github.ref_name }}
+            
+            ### Installation
+            1. Download `ClubEve-CC-${{ github.ref_name }}.apk` below
+            2. Enable "Install from unknown sources" on your device
+            3. Open the APK to install
+          files: app/build/outputs/apk/release/ClubEve-CC-${{ github.ref_name }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
