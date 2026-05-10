@@ -49,7 +49,6 @@ object UpdateChecker {
         return try {
             val response = httpClient.get(API_URL) {
                 header("Accept", "application/vnd.github.v3+json")
-                // Private repo requires auth token
                 if (BuildConfig.GITHUB_TOKEN.isNotBlank()) {
                     header("Authorization", "Bearer ${BuildConfig.GITHUB_TOKEN}")
                 }
@@ -57,21 +56,25 @@ object UpdateChecker {
 
             if (!response.status.isSuccess()) return null
 
-            val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val body = response.bodyAsText()
+            val json = Json.parseToJsonElement(body).jsonObject
 
             val tagName = json["tag_name"]?.jsonPrimitive?.content ?: return null
             val latestVersion = tagName.removePrefix("v")
             val releaseNotes = json["body"]?.jsonPrimitive?.content
+                ?.takeIf { it.isNotBlank() }
                 ?: "Bug fixes and improvements."
 
             // Find the first .apk asset
-            val assets = json["assets"]?.jsonArray ?: return null
+            val assets = json["assets"]?.jsonArray
             val apkUrl = assets
-                .map { it.jsonObject }
-                .firstOrNull { it["name"]?.jsonPrimitive?.content?.endsWith(".apk") == true }
+                ?.map { it.jsonObject }
+                ?.firstOrNull { it["name"]?.jsonPrimitive?.content?.endsWith(".apk") == true }
                 ?.get("browser_download_url")
                 ?.jsonPrimitive?.content
-                ?: return null
+
+            // If no APK asset yet (release still uploading), skip
+            if (apkUrl.isNullOrBlank()) return null
 
             if (isNewerVersion(latestVersion, currentVersion)) {
                 ReleaseInfo(latestVersion, apkUrl, releaseNotes)

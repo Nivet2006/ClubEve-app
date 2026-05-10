@@ -20,7 +20,6 @@ import com.clubeve.cc.ui.components.ThemeToggleFab
 import com.clubeve.cc.ui.navigation.AppNavGraph
 import com.clubeve.cc.ui.navigation.Screen
 import com.clubeve.cc.ui.theme.ClubEveTheme
-import com.clubeve.cc.ui.theme.ThemeState
 import com.clubeve.cc.update.UpdateChecker
 import com.clubeve.cc.update.UpdateDialog
 import io.github.jan.supabase.auth.auth
@@ -43,7 +42,15 @@ class MainActivity : AppCompatActivity() {
                         var startDestination by remember { mutableStateOf<String?>(null) }
                         var pendingRelease by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
 
-                        // Determine start destination
+                        // ── 1. Check for update immediately on every launch ──
+                        LaunchedEffect(Unit) {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                val release = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+                                if (release != null) pendingRelease = release
+                            }
+                        }
+
+                        // ── 2. Determine start destination ───────────────────
                         LaunchedEffect(Unit) {
                             val client = SupabaseClientProvider.client
                             val user = client.auth.currentUserOrNull()
@@ -62,9 +69,6 @@ class MainActivity : AppCompatActivity() {
                                         SessionManager.currentUserId = user.id
                                         SessionManager.currentProfile = profile
                                         startDestination = Screen.Home.route
-
-                                        val release = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
-                                        if (release != null) pendingRelease = release
                                     } else {
                                         try { client.auth.signOut() } catch (_: Exception) {}
                                         SessionManager.clear()
@@ -83,7 +87,7 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
 
-                        // Update dialog
+                        // ── Update dialog — shown as soon as release is found ─
                         pendingRelease?.let { release ->
                             UpdateDialog(
                                 release = release,
