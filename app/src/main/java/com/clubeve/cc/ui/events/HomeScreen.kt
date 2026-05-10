@@ -54,36 +54,31 @@ fun HomeScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val cs = MaterialTheme.colorScheme
 
     val isOnline by produceState(initialValue = true) {
         NetworkMonitor(context).isOnlineFlow.collect { value = it }
     }
 
-    // Ticker for "last synced X ago" — updates every 30s
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) { delay(30_000); now = System.currentTimeMillis() }
     }
 
     LaunchedEffect(Unit) {
-        if (vm.state.value.events.isEmpty() && !vm.state.value.isLoading) {
-            vm.loadEvents()
-        }
+        if (vm.state.value.events.isEmpty() && !vm.state.value.isLoading) vm.loadEvents()
     }
 
     LaunchedEffect(syncMessage) {
-        syncMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            syncMessage = null
-        }
+        syncMessage?.let { snackbarHostState.showSnackbar(it); syncMessage = null }
     }
 
     // ── Logout dialog ─────────────────────────────────────────────────────────
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Sign Out", fontFamily = Mono, fontWeight = FontWeight.Bold, color = Black) },
-            text = { Text("Are you sure you want to sign out?", fontFamily = Mono, fontSize = 13.sp, color = DarkGray) },
+            title = { Text("Sign Out", fontFamily = Mono, fontWeight = FontWeight.Bold, color = cs.onBackground) },
+            text = { Text("Are you sure you want to sign out?", fontFamily = Mono, fontSize = 13.sp, color = cs.onSurface) },
             confirmButton = {
                 TextButton(onClick = { showLogoutDialog = false; vm.logout(onLogout) }) {
                     Text("SIGN OUT", fontFamily = Mono, fontWeight = FontWeight.Bold, color = StatusError, fontSize = 12.sp)
@@ -91,10 +86,10 @@ fun HomeScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("CANCEL", fontFamily = Mono, fontSize = 12.sp, color = MidGray)
+                    Text("CANCEL", fontFamily = Mono, fontSize = 12.sp, color = cs.onSurfaceVariant)
                 }
             },
-            containerColor = White, shape = RoundedCornerShape(12.dp)
+            containerColor = cs.surface, shape = RoundedCornerShape(12.dp)
         )
     }
 
@@ -102,21 +97,17 @@ fun HomeScreen(
     if (showSyncDialog) {
         AlertDialog(
             onDismissRequest = { showSyncDialog = false },
-            title = { Text("Sync Offline Check-ins", fontFamily = Mono, fontWeight = FontWeight.Bold, color = Black) },
+            title = { Text("Sync Offline Check-ins", fontFamily = Mono, fontWeight = FontWeight.Bold, color = cs.onBackground) },
             text = {
-                Text(
-                    "You have $pendingCount offline check-in(s) pending. Sync now?",
-                    fontFamily = Mono, fontSize = 13.sp, color = DarkGray
-                )
+                Text("You have $pendingCount offline check-in(s) pending. Sync now?",
+                    fontFamily = Mono, fontSize = 13.sp, color = cs.onSurface)
             },
             confirmButton = {
                 TextButton(onClick = {
                     showSyncDialog = false
                     coroutineScope.launch {
                         val report = SyncManager.syncPendingCheckIns(context)
-                        if (report.conflicts.isNotEmpty()) {
-                            conflicts = report.conflicts
-                        }
+                        if (report.conflicts.isNotEmpty()) conflicts = report.conflicts
                         syncMessage = buildString {
                             if (report.synced > 0) append("✓ Synced ${report.synced}")
                             if (report.failed > 0) append(" · ⚠ ${report.failed} failed")
@@ -124,15 +115,15 @@ fun HomeScreen(
                         }.ifBlank { "Nothing to sync" }
                     }
                 }) {
-                    Text("SYNC NOW", fontFamily = Mono, fontWeight = FontWeight.Bold, color = Black, fontSize = 12.sp)
+                    Text("SYNC NOW", fontFamily = Mono, fontWeight = FontWeight.Bold, color = cs.primary, fontSize = 12.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSyncDialog = false }) {
-                    Text("CANCEL", fontFamily = Mono, fontSize = 12.sp, color = MidGray)
+                    Text("CANCEL", fontFamily = Mono, fontSize = 12.sp, color = cs.onSurfaceVariant)
                 }
             },
-            containerColor = White, shape = RoundedCornerShape(12.dp)
+            containerColor = cs.surface, shape = RoundedCornerShape(12.dp)
         )
     }
 
@@ -142,57 +133,36 @@ fun HomeScreen(
             onDismissRequest = { conflicts = emptyList() },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Warning, null, tint = StatusWarning,
-                        modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Warning, null, tint = StatusWarning, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Sync Conflicts", fontFamily = Mono, fontWeight = FontWeight.Bold, color = Black)
+                    Text("Sync Conflicts", fontFamily = Mono, fontWeight = FontWeight.Bold, color = cs.onBackground)
                 }
             },
             text = {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 320.dp)
-                        .verticalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        "These students were already checked in remotely with a different timestamp. Remote data was kept.",
-                        fontFamily = Mono, fontSize = 11.sp, color = DarkGray
-                    )
-                    HorizontalDivider(color = BorderDefault)
+                    Text("These students were already checked in remotely with a different timestamp. Remote data was kept.",
+                        fontFamily = Mono, fontSize = 11.sp, color = cs.onSurface)
+                    HorizontalDivider(color = cs.outline)
                     conflicts.forEach { conflict ->
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, BorderDefault, RoundedCornerShape(8.dp))
-                                .padding(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                                .border(1.dp, cs.outline, RoundedCornerShape(8.dp)).padding(10.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(conflict.studentName, fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp, color = Black)
-                            Text(conflict.studentUsn, fontFamily = Mono,
-                                fontSize = 10.sp, color = MidGray)
-                            HorizontalDivider(color = BorderSubtle)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
+                            Text(conflict.studentName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = cs.onSurface)
+                            Text(conflict.studentUsn, fontFamily = Mono, fontSize = 10.sp, color = cs.onSurfaceVariant)
+                            HorizontalDivider(color = cs.outlineVariant)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column {
-                                    Text("YOUR RECORD", fontFamily = Mono,
-                                        fontSize = 9.sp, letterSpacing = 1.sp, color = MidGray)
-                                    Text(
-                                        formatConflictTime(conflict.localCheckedInAt),
-                                        fontFamily = Mono, fontSize = 11.sp, color = StatusError
-                                    )
+                                    Text("YOUR RECORD", fontFamily = Mono, fontSize = 9.sp, letterSpacing = 1.sp, color = cs.onSurfaceVariant)
+                                    Text(formatConflictTime(conflict.localCheckedInAt), fontFamily = Mono, fontSize = 11.sp, color = StatusError)
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("REMOTE", fontFamily = Mono,
-                                        fontSize = 9.sp, letterSpacing = 1.sp, color = MidGray)
-                                    Text(
-                                        formatConflictTime(conflict.remoteCheckedInAt),
-                                        fontFamily = Mono, fontSize = 11.sp, color = StatusSuccess
-                                    )
+                                    Text("REMOTE", fontFamily = Mono, fontSize = 9.sp, letterSpacing = 1.sp, color = cs.onSurfaceVariant)
+                                    Text(formatConflictTime(conflict.remoteCheckedInAt), fontFamily = Mono, fontSize = 11.sp, color = StatusSuccess)
                                 }
                             }
                         }
@@ -201,133 +171,108 @@ fun HomeScreen(
             },
             confirmButton = {
                 TextButton(onClick = { conflicts = emptyList() }) {
-                    Text("GOT IT", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                        color = Black, fontSize = 12.sp)
+                    Text("GOT IT", fontFamily = Mono, fontWeight = FontWeight.Bold, color = cs.primary, fontSize = 12.sp)
                 }
             },
-            containerColor = White, shape = RoundedCornerShape(12.dp)
+            containerColor = cs.surface, shape = RoundedCornerShape(12.dp)
         )
     }
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = 80.dp)
-            )
+            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
         },
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text("MY EVENTS", fontFamily = Mono, fontWeight = FontWeight.Black,
-                            fontSize = 14.sp, letterSpacing = 2.sp, color = Black)
-                        // Last synced timestamp
+                            fontSize = 14.sp, letterSpacing = 2.sp, color = cs.onBackground)
                         if (state.lastSyncedAt > 0L) {
-                            Text(
-                                "Synced ${formatRelativeTime(state.lastSyncedAt, now)}",
-                                fontFamily = Mono, fontSize = 9.sp, color = MidGray
-                            )
+                            Text("Synced ${formatRelativeTime(state.lastSyncedAt, now)}",
+                                fontFamily = Mono, fontSize = 9.sp, color = cs.onSurfaceVariant)
                         }
                     }
                 },
                 actions = {
                     if (pendingCount > 0) {
-                        BadgedBox(
-                            badge = {
-                                Badge(containerColor = Color(0xFFFF3B30), contentColor = White) {
-                                    Text(pendingCount.toString(), fontFamily = Mono, fontSize = 9.sp)
-                                }
+                        BadgedBox(badge = {
+                            Badge(containerColor = Color(0xFFFF3B30), contentColor = Color.White) {
+                                Text(pendingCount.toString(), fontFamily = Mono, fontSize = 9.sp)
                             }
-                        ) {
+                        }) {
                             IconButton(onClick = { showSyncDialog = true }) {
-                                Icon(Icons.Default.CloudUpload, "Sync pending check-ins", tint = DarkGray)
+                                Icon(Icons.Default.CloudUpload, "Sync", tint = cs.onSurfaceVariant)
                             }
                         }
                     }
                     IconButton(onClick = vm::loadEvents) {
-                        Icon(Icons.Default.Refresh, "Refresh", tint = DarkGray)
+                        Icon(Icons.Default.Refresh, "Refresh", tint = cs.onSurfaceVariant)
                     }
                     IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, "Logout", tint = DarkGray)
+                        Icon(Icons.AutoMirrored.Filled.Logout, "Logout", tint = cs.onSurfaceVariant)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White, titleContentColor = Black)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = cs.background, titleContentColor = cs.onBackground)
             )
         },
-        containerColor = White
+        containerColor = cs.background
     ) { padding ->
         Column(Modifier.padding(padding)) {
-            HorizontalDivider(color = BorderDefault, thickness = 1.dp)
+            HorizontalDivider(color = cs.outline, thickness = 1.dp)
 
             if (!isOnline) {
                 Surface(color = Color(0xFFFF9500)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.WifiOff, null, tint = White, modifier = Modifier.size(14.dp))
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.WifiOff, null, tint = Color.White, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Offline — check-ins will sync when online",
-                            color = White, fontFamily = Mono, fontSize = 11.sp)
+                        Text("Offline — check-ins will sync when online", color = Color.White, fontFamily = Mono, fontSize = 11.sp)
                     }
                 }
             }
 
             PullToRefreshBox(
-                isRefreshing = state.isLoading,
-                onRefresh = vm::loadEvents,
-                state = pullRefreshState,
-                modifier = Modifier.fillMaxSize()
+                isRefreshing = state.isLoading, onRefresh = vm::loadEvents,
+                state = pullRefreshState, modifier = Modifier.fillMaxSize()
             ) {
                 when {
                     state.isLoading && state.events.isEmpty() -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Black, strokeWidth = 2.dp,
-                                modifier = Modifier.size(28.dp))
+                            CircularProgressIndicator(color = cs.primary, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
                         }
                     }
                     state.error != null && state.events.isEmpty() -> {
-                        Column(
-                            Modifier.fillMaxSize().padding(32.dp),
+                        Column(Modifier.fillMaxSize().padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
+                            verticalArrangement = Arrangement.Center) {
                             Text("ERROR", fontFamily = Mono, fontWeight = FontWeight.Black,
                                 fontSize = 11.sp, letterSpacing = 2.sp, color = StatusError)
                             Spacer(Modifier.height(8.dp))
-                            Text(state.error ?: "", fontFamily = Mono, fontSize = 12.sp, color = DarkGray)
+                            Text(state.error ?: "", fontFamily = Mono, fontSize = 12.sp, color = cs.onSurface)
                             Spacer(Modifier.height(16.dp))
-                            OutlinedButton(
-                                onClick = vm::loadEvents,
-                                shape = RoundedCornerShape(6.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Black),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Black)
-                            ) {
+                            OutlinedButton(onClick = vm::loadEvents, shape = RoundedCornerShape(6.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, cs.primary),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary)) {
                                 Text("RETRY", fontFamily = Mono, fontSize = 11.sp)
                             }
                         }
                     }
                     state.events.isEmpty() -> {
-                        Column(
-                            Modifier.fillMaxSize().padding(32.dp),
+                        Column(Modifier.fillMaxSize().padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text("—", fontSize = 32.sp, color = LightGray)
+                            verticalArrangement = Arrangement.Center) {
+                            Text("—", fontSize = 32.sp, color = cs.onSurfaceVariant)
                             Spacer(Modifier.height(12.dp))
-                            Text("No events assigned to you.", fontFamily = Mono,
-                                fontSize = 12.sp, color = MidGray)
+                            Text("No events assigned to you.", fontFamily = Mono, fontSize = 12.sp, color = cs.onSurfaceVariant)
                         }
                     }
                     else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
+                        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             items(state.events, key = { it.id }) { event ->
                                 EventCard(event = event, onClick = { onEventClick(event.id) })
-                                HorizontalDivider(color = BorderSubtle)
+                                HorizontalDivider(color = cs.outlineVariant)
                             }
                         }
                     }
@@ -337,83 +282,65 @@ fun HomeScreen(
     }
 }
 
-// ── Event card with countdown ─────────────────────────────────────────────────
+// ── Event card ────────────────────────────────────────────────────────────────
 
 @Composable
 fun EventCard(event: Event, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val dateStr = remember(event.eventDate) {
-        try {
-            ZonedDateTime.parse(event.eventDate)
-                .format(DateTimeFormatter.ofPattern("dd MMM yyyy · HH:mm", Locale.getDefault()))
+        try { ZonedDateTime.parse(event.eventDate)
+            .format(DateTimeFormatter.ofPattern("dd MMM yyyy · HH:mm", Locale.getDefault()))
         } catch (_: Exception) { event.eventDate }
     }
 
-    // Live countdown — ticks every second for upcoming events
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
     val eventMs = remember(event.eventDate) {
         try { ZonedDateTime.parse(event.eventDate).toInstant().toEpochMilli() }
         catch (_: Exception) { 0L }
     }
-    val isUpcoming = eventMs > nowMs
     LaunchedEffect(event.id) {
-        while (isUpcoming) { delay(1_000); nowMs = System.currentTimeMillis() }
+        while (eventMs > System.currentTimeMillis()) { delay(1_000); nowMs = System.currentTimeMillis() }
     }
     val countdown = remember(nowMs, eventMs) { buildCountdown(eventMs, nowMs) }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(White)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .background(cs.background).padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+            modifier = Modifier.fillMaxWidth()) {
             Text(event.title, fontWeight = FontWeight.Bold, fontSize = 15.sp,
-                color = Black, modifier = Modifier.weight(1f))
+                color = cs.onBackground, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             EventStatusBadge(status = event.status)
         }
-
         Spacer(Modifier.height(4.dp))
         Text(event.clubName.uppercase(), fontFamily = Mono, fontSize = 10.sp,
-            letterSpacing = 1.sp, color = MidGray)
+            letterSpacing = 1.sp, color = cs.onSurfaceVariant)
         Spacer(Modifier.height(4.dp))
-
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Schedule, null, tint = MidGray, modifier = Modifier.size(12.dp))
+            Icon(Icons.Default.Schedule, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(4.dp))
-            Text(dateStr, fontFamily = Mono, fontSize = 11.sp, color = MidGray)
+            Text(dateStr, fontFamily = Mono, fontSize = 11.sp, color = cs.onSurfaceVariant)
         }
-
         if (!event.location.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, null, tint = MidGray, modifier = Modifier.size(12.dp))
+                Icon(Icons.Default.LocationOn, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(12.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(event.location, fontFamily = Mono, fontSize = 11.sp, color = MidGray)
+                Text(event.location, fontFamily = Mono, fontSize = 11.sp, color = cs.onSurfaceVariant)
             }
         }
-
-        // Countdown pill — only for upcoming events
         if (countdown != null) {
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Timer, null, tint = Black, modifier = Modifier.size(11.dp))
+                Icon(Icons.Default.Timer, null, tint = cs.primary, modifier = Modifier.size(11.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(
-                    countdown,
-                    fontFamily = Mono,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    color = Black
-                )
+                Text(countdown, fontFamily = Mono, fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp, color = cs.primary)
             }
         }
-
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MonoBadge("${event.registrationCount} registered")
@@ -424,7 +351,6 @@ fun EventCard(event: Event, onClick: () -> Unit) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Returns a human-readable countdown string, or null if event is in the past. */
 private fun buildCountdown(eventMs: Long, nowMs: Long): String? {
     val diff = eventMs - nowMs
     if (diff <= 0) return null
@@ -440,14 +366,13 @@ private fun buildCountdown(eventMs: Long, nowMs: Long): String? {
     }
 }
 
-/** "just now", "2 min ago", "1 hr ago", etc. */
 private fun formatRelativeTime(syncedAt: Long, now: Long): String {
     val diff = now - syncedAt
     return when {
-        diff < 60_000L              -> "just now"
-        diff < 3_600_000L           -> "${diff / 60_000L} min ago"
-        diff < 86_400_000L          -> "${diff / 3_600_000L} hr ago"
-        else                        -> "${diff / 86_400_000L} days ago"
+        diff < 60_000L     -> "just now"
+        diff < 3_600_000L  -> "${diff / 60_000L} min ago"
+        diff < 86_400_000L -> "${diff / 3_600_000L} hr ago"
+        else               -> "${diff / 86_400_000L} days ago"
     }
 }
 
@@ -455,26 +380,26 @@ private fun formatConflictTime(iso: String?): String {
     if (iso == null) return "—"
     return try {
         DateTimeFormatter.ofPattern("dd MMM HH:mm:ss")
-            .withZone(ZoneId.systemDefault())
-            .format(Instant.parse(iso))
+            .withZone(ZoneId.systemDefault()).format(Instant.parse(iso))
     } catch (_: Exception) { iso }
 }
 
 @Composable
 fun EventStatusBadge(status: String?) {
+    val cs = MaterialTheme.colorScheme
     val label = when (status?.lowercase()) {
         "ongoing"   -> "ONGOING"
         "completed" -> "DONE"
         else        -> "UPCOMING"
     }
     val (bg, fg) = when (status?.lowercase()) {
-        "ongoing"   -> Black to White
-        "completed" -> LightGray to MidGray
-        else        -> White to Black
+        "ongoing"   -> cs.primary to cs.onPrimary
+        "completed" -> cs.surfaceVariant to cs.onSurfaceVariant
+        else        -> cs.background to cs.onBackground
     }
     Box(
         modifier = Modifier
-            .border(1.dp, if (status?.lowercase() == "ongoing") Black else BorderDefault, RoundedCornerShape(4.dp))
+            .border(1.dp, if (status?.lowercase() == "ongoing") cs.primary else cs.outline, RoundedCornerShape(4.dp))
             .background(bg, RoundedCornerShape(4.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
@@ -485,12 +410,14 @@ fun EventStatusBadge(status: String?) {
 
 @Composable
 fun MonoBadge(text: String, filled: Boolean = false) {
+    val cs = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
-            .border(1.dp, if (filled) Black else BorderDefault, RoundedCornerShape(4.dp))
-            .background(if (filled) Black else White, RoundedCornerShape(4.dp))
+            .border(1.dp, if (filled) cs.primary else cs.outline, RoundedCornerShape(4.dp))
+            .background(if (filled) cs.primary else cs.background, RoundedCornerShape(4.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
-        Text(text, fontFamily = Mono, fontSize = 10.sp, color = if (filled) White else DarkGray)
+        Text(text, fontFamily = Mono, fontSize = 10.sp,
+            color = if (filled) cs.onPrimary else cs.onSurface)
     }
 }
