@@ -193,10 +193,11 @@ fun EventDetailScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, cs.primary),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onBackground)
                     ) {
-                        Icon(Icons.Default.People, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.People, null,
+                            modifier = Modifier.size(16.dp), tint = cs.onBackground)
                         Spacer(Modifier.width(6.dp))
                         Text("ATTENDEES", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp, letterSpacing = 1.sp)
+                            fontSize = 11.sp, letterSpacing = 1.sp, color = cs.onBackground)
                     }
                 }
 
@@ -217,10 +218,12 @@ fun EventDetailScreen(
                         Text("FETCHING…", fontFamily = Mono, fontWeight = FontWeight.Bold,
                             fontSize = 11.sp, letterSpacing = 1.sp, color = cs.onSurfaceVariant)
                     } else {
-                        Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.CloudDownload, null,
+                            modifier = Modifier.size(16.dp), tint = cs.onBackground)
                         Spacer(Modifier.width(6.dp))
                         Text("FETCH REGISTERED LIST", fontFamily = Mono,
-                            fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
+                            fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                            letterSpacing = 1.sp, color = cs.onBackground)
                     }
                 }
             }
