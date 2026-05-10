@@ -134,11 +134,14 @@ class MainActivity : AppCompatActivity() {
                         AppNavGraph(navController = navController, startDestination = dest)
                     }
 
+                    // Hide the theme toggle FAB when glassmorphism is active
+                    if (!isGlass) {
+                        ThemeToggleFab()
+                    }
+
                     pendingRelease?.let { release ->
                         UpdateDialog(release = release, onDismiss = { pendingRelease = null })
                     }
-
-                    ThemeToggleFab()
                 }
             }
         }
