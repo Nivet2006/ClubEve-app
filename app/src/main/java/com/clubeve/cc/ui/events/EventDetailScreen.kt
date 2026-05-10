@@ -39,8 +39,8 @@ fun EventDetailScreen(
     val event = remember(state.events, eventId) { state.events.find { it.id == eventId } }
     val isFetching = state.fetchingEventId == eventId
     val snackbarHostState = remember { SnackbarHostState() }
+    val cs = MaterialTheme.colorScheme
 
-    // Show snackbar when fetch completes
     LaunchedEffect(state.fetchSuccess) {
         state.fetchSuccess?.let {
             snackbarHostState.showSnackbar(it)
@@ -52,173 +52,145 @@ fun EventDetailScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        event?.title?.uppercase() ?: "EVENT",
-                        fontFamily = Mono,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 13.sp,
-                        letterSpacing = 1.sp,
-                        maxLines = 1,
-                        color = Black
-                    )
+                    Text(event?.title?.uppercase() ?: "EVENT", fontFamily = Mono,
+                        fontWeight = FontWeight.Black, fontSize = 13.sp,
+                        letterSpacing = 1.sp, maxLines = 1, color = cs.onBackground)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Black)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = cs.onBackground)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White, titleContentColor = Black)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = cs.background, titleContentColor = cs.onBackground)
             )
         },
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = 80.dp)
-            )
+            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
         },
-        containerColor = White
+        containerColor = cs.background
     ) { padding ->
         if (event == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Black, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
+                CircularProgressIndicator(color = cs.primary, strokeWidth = 2.dp,
+                    modifier = Modifier.size(28.dp))
             }
             return@Scaffold
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
         ) {
-            HorizontalDivider(color = BorderDefault)
+            HorizontalDivider(color = cs.outline)
 
             // Banner
             if (!event.bannerUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = event.bannerUrl,
-                    contentDescription = "Banner",
+                AsyncImage(model = event.bannerUrl, contentDescription = "Banner",
                     modifier = Modifier.fillMaxWidth().height(180.dp),
-                    contentScale = ContentScale.Crop
-                )
+                    contentScale = ContentScale.Crop)
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .background(OffWhite),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        event.title.take(2).uppercase(),
-                        fontFamily = Mono,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 40.sp,
-                        color = LightGray
-                    )
+                Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(cs.surface),
+                    contentAlignment = Alignment.Center) {
+                    Text(event.title.take(2).uppercase(), fontFamily = Mono,
+                        fontWeight = FontWeight.Black, fontSize = 40.sp,
+                        color = cs.onSurfaceVariant.copy(alpha = 0.3f))
                 }
             }
 
-            HorizontalDivider(color = BorderDefault)
+            HorizontalDivider(color = cs.outline)
 
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-                // Title + status
-                Row(
-                    verticalAlignment = Alignment.Top,
+                Row(verticalAlignment = Alignment.Top,
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                    modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.weight(1f)) {
-                        Text(event.title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Black)
+                        Text(event.title, fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp, color = cs.onBackground)
                         Spacer(Modifier.height(2.dp))
                         Text(event.clubName.uppercase(), fontFamily = Mono, fontSize = 10.sp,
-                            letterSpacing = 1.sp, color = MidGray)
+                            letterSpacing = 1.sp, color = cs.onSurfaceVariant)
                     }
                     Spacer(Modifier.width(12.dp))
                     EventStatusBadge(status = event.status)
                 }
 
-                HorizontalDivider(color = BorderSubtle)
+                HorizontalDivider(color = cs.outlineVariant)
 
-                // Info rows
                 InfoLine(Icons.Default.Schedule, formatEventDate(event.eventDate))
                 if (!event.location.isNullOrBlank())
                     InfoLine(Icons.Default.LocationOn, event.location)
                 if (!event.description.isNullOrBlank())
                     InfoLine(Icons.Default.Info, event.description)
 
-                HorizontalDivider(color = BorderSubtle)
+                HorizontalDivider(color = cs.outlineVariant)
 
                 // Stats bar
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, BorderDefault, RoundedCornerShape(8.dp))
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                        .border(1.dp, cs.outline, RoundedCornerShape(8.dp)).padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${event.registrationCount}", fontFamily = Mono, fontWeight = FontWeight.Black,
-                            fontSize = 22.sp, color = Black)
-                        Text("REGISTERED", fontFamily = Mono, fontSize = 9.sp, letterSpacing = 1.sp, color = MidGray)
+                        Text("${event.registrationCount}", fontFamily = Mono,
+                            fontWeight = FontWeight.Black, fontSize = 22.sp, color = cs.onBackground)
+                        Text("REGISTERED", fontFamily = Mono, fontSize = 9.sp,
+                            letterSpacing = 1.sp, color = cs.onSurfaceVariant)
                     }
-                    Box(Modifier.width(1.dp).height(36.dp).background(BorderDefault))
+                    Box(Modifier.width(1.dp).height(36.dp).background(cs.outline))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${event.attendanceCount}", fontFamily = Mono, fontWeight = FontWeight.Black,
-                            fontSize = 22.sp, color = Black)
-                        Text("PRESENT", fontFamily = Mono, fontSize = 9.sp, letterSpacing = 1.sp, color = MidGray)
+                        Text("${event.attendanceCount}", fontFamily = Mono,
+                            fontWeight = FontWeight.Black, fontSize = 22.sp, color = cs.onBackground)
+                        Text("PRESENT", fontFamily = Mono, fontSize = 9.sp,
+                            letterSpacing = 1.sp, color = cs.onSurfaceVariant)
                     }
-                    Box(Modifier.width(1.dp).height(36.dp).background(BorderDefault))
+                    Box(Modifier.width(1.dp).height(36.dp).background(cs.outline))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         val pct = if (event.registrationCount > 0)
                             (event.attendanceCount * 100 / event.registrationCount) else 0L
                         Text("$pct%", fontFamily = Mono, fontWeight = FontWeight.Black,
-                            fontSize = 22.sp, color = Black)
-                        Text("RATE", fontFamily = Mono, fontSize = 9.sp, letterSpacing = 1.sp, color = MidGray)
+                            fontSize = 22.sp, color = cs.onBackground)
+                        Text("RATE", fontFamily = Mono, fontSize = 9.sp,
+                            letterSpacing = 1.sp, color = cs.onSurfaceVariant)
                     }
                 }
 
-                // Progress bar
-                val progress = if (event.registrationCount > 0)
-                    (event.attendanceCount.toFloat() / event.registrationCount.toFloat()).coerceIn(0f, 1f)
-                else 0f
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = {
+                        if (event.registrationCount > 0)
+                            (event.attendanceCount.toFloat() / event.registrationCount.toFloat()).coerceIn(0f, 1f)
+                        else 0f
+                    },
                     modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
-                    color = Black,
-                    trackColor = LightGray
+                    color = cs.primary,
+                    trackColor = cs.surfaceVariant
                 )
 
-                HorizontalDivider(color = BorderSubtle)
+                HorizontalDivider(color = cs.outlineVariant)
 
-                // Action buttons — row 1: Scan QR + Attendees
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Scan QR — filled black
+                // Scan QR + Attendees
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
                         onClick = onScanQR,
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Black),
+                        colors = ButtonDefaults.buttonColors(containerColor = cs.primary),
                         elevation = ButtonDefaults.buttonElevation(0.dp)
                     ) {
-                        Icon(Icons.Default.QrCodeScanner, null, modifier = Modifier.size(16.dp), tint = White)
+                        Icon(Icons.Default.QrCodeScanner, null,
+                            modifier = Modifier.size(16.dp), tint = cs.onPrimary)
                         Spacer(Modifier.width(6.dp))
                         Text("SCAN QR", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp, letterSpacing = 1.sp, color = White)
+                            fontSize = 11.sp, letterSpacing = 1.sp, color = cs.onPrimary)
                     }
-
-                    // View Attendees — outlined
                     OutlinedButton(
                         onClick = onViewAttendees,
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Black),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Black)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, cs.primary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary)
                     ) {
                         Icon(Icons.Default.People, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
@@ -227,31 +199,27 @@ fun EventDetailScreen(
                     }
                 }
 
-                // Action buttons — row 2: Fetch for offline
+                // Fetch for offline
                 OutlinedButton(
                     onClick = { vm.fetchAndCacheForOffline(eventId) },
                     enabled = !isFetching,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(8.dp),
                     border = androidx.compose.foundation.BorderStroke(
-                        1.dp, if (isFetching) BorderDefault else Black
-                    ),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Black)
+                        1.dp, if (isFetching) cs.outline else cs.primary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary)
                 ) {
                     if (isFetching) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
-                            color = Black,
-                            strokeWidth = 2.dp
-                        )
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp),
+                            color = cs.primary, strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
                         Text("FETCHING…", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp, letterSpacing = 1.sp, color = MidGray)
+                            fontSize = 11.sp, letterSpacing = 1.sp, color = cs.onSurfaceVariant)
                     } else {
                         Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("FETCH REGISTERED LIST", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp, letterSpacing = 1.sp)
+                        Text("FETCH REGISTERED LIST", fontFamily = Mono,
+                            fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
                     }
                 }
             }
@@ -261,10 +229,12 @@ fun EventDetailScreen(
 
 @Composable
 private fun InfoLine(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    val cs = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.Top) {
-        Icon(icon, null, tint = MidGray, modifier = Modifier.size(14.dp).padding(top = 2.dp))
+        Icon(icon, null, tint = cs.onSurfaceVariant,
+            modifier = Modifier.size(14.dp).padding(top = 2.dp))
         Spacer(Modifier.width(10.dp))
-        Text(text, fontFamily = Mono, fontSize = 12.sp, color = DarkGray)
+        Text(text, fontFamily = Mono, fontSize = 12.sp, color = cs.onSurface)
     }
 }
 

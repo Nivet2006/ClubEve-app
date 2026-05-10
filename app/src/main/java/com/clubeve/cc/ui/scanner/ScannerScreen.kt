@@ -75,40 +75,31 @@ fun ScannerScreen(
                 modifier = Modifier.padding(bottom = 80.dp)
             )
         },
-        containerColor = White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
+        val cs = MaterialTheme.colorScheme
         Column(Modifier.fillMaxSize().padding(padding)) {
 
-            // Tab row — minimal B&W
+            // Tab row
             TabRow(
                 selectedTabIndex = state.selectedTab,
-                containerColor = White,
-                contentColor = Black,
+                containerColor = cs.background,
+                contentColor = cs.onBackground,
                 indicator = { tabPositions ->
                     TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[state.selectedTab]),
-                        color = Black,
+                        color = cs.primary,
                         height = 2.dp
                     )
                 },
-                divider = { HorizontalDivider(color = BorderDefault) }
+                divider = { HorizontalDivider(color = cs.outline) }
             ) {
-                Tab(
-                    selected = state.selectedTab == 0,
-                    onClick = { vm.selectTab(0) },
-                    text = {
-                        Text("SCAN QR", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp, letterSpacing = 1.sp)
-                    }
-                )
-                Tab(
-                    selected = state.selectedTab == 1,
-                    onClick = { vm.selectTab(1) },
-                    text = {
-                        Text("MANUAL USN", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp, letterSpacing = 1.sp)
-                    }
-                )
+                Tab(selected = state.selectedTab == 0, onClick = { vm.selectTab(0) },
+                    text = { Text("SCAN QR", fontFamily = Mono, fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp, letterSpacing = 1.sp) })
+                Tab(selected = state.selectedTab == 1, onClick = { vm.selectTab(1) },
+                    text = { Text("MANUAL USN", fontFamily = Mono, fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp, letterSpacing = 1.sp) })
             }
 
             // Back row
@@ -117,12 +108,12 @@ fun ScannerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Black)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = cs.onBackground)
                 }
-                Text("Back to Event", fontFamily = Mono, fontSize = 11.sp, color = MidGray)
+                Text("Back to Event", fontFamily = Mono, fontSize = 11.sp, color = cs.onSurfaceVariant)
             }
 
-            HorizontalDivider(color = BorderDefault)
+            HorizontalDivider(color = cs.outline)
 
             when (state.selectedTab) {
                 0 -> QRScanTab(eventId, state, vm, cameraPermission)
@@ -219,20 +210,22 @@ private fun QRScanTab(
 
         } else {
             Column(
-                Modifier.fillMaxSize().background(White),
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                val cs = MaterialTheme.colorScheme
                 Text("CAMERA PERMISSION REQUIRED", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp, letterSpacing = 1.sp, color = Black)
+                    fontSize = 11.sp, letterSpacing = 1.sp, color = cs.onBackground)
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = { cameraPermission.launchPermissionRequest() },
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Black),
+                    colors = ButtonDefaults.buttonColors(containerColor = cs.primary),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
-                    Text("GRANT PERMISSION", fontFamily = Mono, fontSize = 11.sp, letterSpacing = 1.sp, color = White)
+                    Text("GRANT PERMISSION", fontFamily = Mono, fontSize = 11.sp,
+                        letterSpacing = 1.sp, color = cs.onPrimary)
                 }
             }
         }
@@ -331,19 +324,21 @@ private fun ScanFlashCard(flash: ScanFlash) {
 private fun ManualUsnTab(eventId: String, state: ScannerUiState, vm: ScannerViewModel) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
+    val cs = MaterialTheme.colorScheme
 
     Column(
-        Modifier.fillMaxSize().background(White).padding(20.dp),
+        Modifier.fillMaxSize().background(cs.background).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("ENTER STUDENT USN", fontFamily = Mono, fontWeight = FontWeight.Bold,
-            fontSize = 11.sp, letterSpacing = 1.5.sp, color = MidGray)
+            fontSize = 11.sp, letterSpacing = 1.5.sp, color = cs.onSurfaceVariant)
 
         OutlinedTextField(
             value = state.manualUsn,
             onValueChange = vm::onManualUsnChange,
             label = { Text("USN", fontFamily = Mono, fontSize = 11.sp) },
-            placeholder = { Text("1GD24CS001", fontFamily = Mono, fontSize = 13.sp, color = LightGray) },
+            placeholder = { Text("1GD24CS001", fontFamily = Mono, fontSize = 13.sp,
+                color = cs.onSurfaceVariant.copy(alpha = 0.5f)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
             singleLine = true,
@@ -357,15 +352,15 @@ private fun ManualUsnTab(eventId: String, state: ScannerUiState, vm: ScannerView
                 vm.findByManualUsn(eventId, context)
             }),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Black,
-                unfocusedBorderColor = BorderDefault,
-                focusedContainerColor = White,
-                unfocusedContainerColor = White,
-                focusedTextColor = Black,
-                unfocusedTextColor = Black,
-                cursorColor = Black,
-                focusedLabelColor = Black,
-                unfocusedLabelColor = MidGray
+                focusedBorderColor = cs.primary,
+                unfocusedBorderColor = cs.outline,
+                focusedContainerColor = cs.surface,
+                unfocusedContainerColor = cs.surface,
+                focusedTextColor = cs.onSurface,
+                unfocusedTextColor = cs.onSurface,
+                cursorColor = cs.primary,
+                focusedLabelColor = cs.primary,
+                unfocusedLabelColor = cs.onSurfaceVariant
             )
         )
 
@@ -375,16 +370,17 @@ private fun ManualUsnTab(eventId: String, state: ScannerUiState, vm: ScannerView
             modifier = Modifier.fillMaxWidth().height(48.dp),
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Black,
-                disabledContainerColor = LightGray
+                containerColor = cs.primary,
+                disabledContainerColor = cs.surfaceVariant
             ),
             elevation = ButtonDefaults.buttonElevation(0.dp)
         ) {
             if (state.isProcessing) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = White, strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(18.dp),
+                    color = cs.onPrimary, strokeWidth = 2.dp)
             } else {
                 Text("FIND STUDENT", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp, letterSpacing = 1.sp, color = White)
+                    fontSize = 11.sp, letterSpacing = 1.sp, color = cs.onPrimary)
             }
         }
 

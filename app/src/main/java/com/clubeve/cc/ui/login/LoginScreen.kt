@@ -43,13 +43,10 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val activity = context as FragmentActivity
+    val cs = MaterialTheme.colorScheme
 
-    // Check for saved credentials on first composition
-    LaunchedEffect(Unit) {
-        viewModel.checkSavedCredentials(context)
-    }
+    LaunchedEffect(Unit) { viewModel.checkSavedCredentials(context) }
 
-    // Auto-trigger biometric prompt if saved credentials exist
     LaunchedEffect(uiState.hasSavedCredentials) {
         if (uiState.hasSavedCredentials && !uiState.showManualForm) {
             val canBio = BiometricManager.from(context)
@@ -61,18 +58,14 @@ fun LoginScreen(
                     title = "Welcome back, ${uiState.savedUsn}",
                     subtitle = "Verify to sign in",
                     onSuccess = { viewModel.loginWithSavedCredentials(context, onLoginSuccess) },
-                    onFailed = { /* stay on screen */ },
-                    onError = { msg -> /* stay on screen, user can tap button again */ }
+                    onFailed = {},
+                    onError = {}
                 )
             }
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(White)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -82,11 +75,10 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text("CLUB-EVE", fontFamily = Mono, fontWeight = FontWeight.Black,
-                fontSize = 22.sp, letterSpacing = 2.sp, color = Black)
+                fontSize = 22.sp, letterSpacing = 2.sp, color = cs.onBackground)
 
             Spacer(Modifier.height(40.dp))
 
-            // ── Biometric card (shown when saved credentials exist) ──────────
             if (uiState.hasSavedCredentials && !uiState.showManualForm) {
                 BiometricCard(
                     usn = uiState.savedUsn,
@@ -105,7 +97,6 @@ fun LoginScreen(
                     onForget = { viewModel.forgetSavedCredentials(context) }
                 )
             } else {
-                // ── Manual login form ────────────────────────────────────────
                 ManualLoginForm(
                     uiState = uiState,
                     onUsnChange = viewModel::onUsnChange,
@@ -116,7 +107,6 @@ fun LoginScreen(
                 )
             }
 
-            // Error card
             AnimatedVisibility(visible = uiState.error != null, enter = fadeIn(), exit = fadeOut()) {
                 Box(
                     modifier = Modifier
@@ -133,63 +123,43 @@ fun LoginScreen(
     }
 }
 
-// ── Biometric card ────────────────────────────────────────────────────────────
-
 @Composable
 private fun BiometricCard(
-    usn: String,
-    isLoading: Boolean,
-    onBiometricTap: () -> Unit,
-    onUsePassword: () -> Unit,
-    onForget: () -> Unit
+    usn: String, isLoading: Boolean,
+    onBiometricTap: () -> Unit, onUsePassword: () -> Unit, onForget: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, BorderDefault, RoundedCornerShape(12.dp))
-            .background(White, RoundedCornerShape(12.dp))
+            .border(1.dp, cs.outline, RoundedCornerShape(12.dp))
+            .background(cs.surface, RoundedCornerShape(12.dp))
             .padding(28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("SAVED ACCOUNT", fontFamily = Mono, fontWeight = FontWeight.Bold,
-            fontSize = 10.sp, letterSpacing = 2.sp, color = MidGray)
-
+            fontSize = 10.sp, letterSpacing = 2.sp, color = cs.onSurfaceVariant)
         Text(usn, fontFamily = Mono, fontWeight = FontWeight.Black,
-            fontSize = 20.sp, color = Black)
-
-        HorizontalDivider(color = BorderSubtle)
-
-        // Big fingerprint / face button
+            fontSize = 20.sp, color = cs.onSurface)
+        HorizontalDivider(color = cs.outlineVariant)
         if (isLoading) {
-            CircularProgressIndicator(color = Black, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
+            CircularProgressIndicator(color = cs.primary, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
         } else {
             IconButton(
                 onClick = onBiometricTap,
-                modifier = Modifier
-                    .size(72.dp)
-                    .border(1.dp, Black, RoundedCornerShape(36.dp))
+                modifier = Modifier.size(72.dp).border(1.dp, cs.primary, RoundedCornerShape(36.dp))
             ) {
-                Icon(
-                    Icons.Default.Fingerprint,
-                    contentDescription = "Biometric login",
-                    tint = Black,
-                    modifier = Modifier.size(36.dp)
-                )
+                Icon(Icons.Default.Fingerprint, "Biometric login",
+                    tint = cs.primary, modifier = Modifier.size(36.dp))
             }
             Text("Tap to sign in with biometrics", fontFamily = Mono,
-                fontSize = 11.sp, color = MidGray)
+                fontSize = 11.sp, color = cs.onSurfaceVariant)
         }
-
-        HorizontalDivider(color = BorderSubtle)
-
-        // Secondary actions
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        HorizontalDivider(color = cs.outlineVariant)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = onUsePassword) {
-                Text("Use password", fontFamily = Mono, fontSize = 11.sp, color = DarkGray)
+                Text("Use password", fontFamily = Mono, fontSize = 11.sp, color = cs.onSurface)
             }
             TextButton(onClick = onForget) {
                 Text("Forget account", fontFamily = Mono, fontSize = 11.sp, color = StatusError)
@@ -198,119 +168,90 @@ private fun BiometricCard(
     }
 }
 
-// ── Manual login form ─────────────────────────────────────────────────────────
-
 @Composable
 private fun ManualLoginForm(
     uiState: LoginUiState,
-    onUsnChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onTogglePassword: () -> Unit,
-    onToggleRememberMe: () -> Unit,
-    onSignIn: () -> Unit
+    onUsnChange: (String) -> Unit, onPasswordChange: (String) -> Unit,
+    onTogglePassword: () -> Unit, onToggleRememberMe: () -> Unit, onSignIn: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, BorderDefault, RoundedCornerShape(12.dp))
-            .background(White, RoundedCornerShape(12.dp))
+            .border(1.dp, cs.outline, RoundedCornerShape(12.dp))
+            .background(cs.surface, RoundedCornerShape(12.dp))
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        MinimalTextField(
-            value = uiState.usn,
-            onValueChange = onUsnChange,
-            label = "USN",
-            placeholder = "1GD24CS001",
+        MinimalTextField(value = uiState.usn, onValueChange = onUsnChange,
+            label = "USN", placeholder = "1GD24CS001",
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Characters,
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Next
-            )
-        )
-
-        MinimalTextField(
-            value = uiState.password,
-            onValueChange = onPasswordChange,
-            label = "PASSWORD",
-            placeholder = "••••••",
-            isPassword = true,
-            isPasswordVisible = uiState.isPasswordVisible,
+                keyboardType = KeyboardType.Text, imeAction = ImeAction.Next))
+        MinimalTextField(value = uiState.password, onValueChange = onPasswordChange,
+            label = "PASSWORD", placeholder = "••••••",
+            isPassword = true, isPasswordVisible = uiState.isPasswordVisible,
             onTogglePassword = onTogglePassword,
             keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
-            )
-        )
-
-        // Remember Me toggle
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+                keyboardType = KeyboardType.Password, imeAction = ImeAction.Done))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Checkbox(
                 checked = uiState.rememberMe,
                 onCheckedChange = { onToggleRememberMe() },
                 colors = CheckboxDefaults.colors(
-                    checkedColor = Black,
-                    uncheckedColor = BorderDefault,
-                    checkmarkColor = White
+                    checkedColor = cs.primary,
+                    uncheckedColor = cs.outline,
+                    checkmarkColor = cs.onPrimary
                 )
             )
             Spacer(Modifier.width(8.dp))
             Column {
                 Text("Remember me", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp, color = Black)
+                    fontSize = 12.sp, color = cs.onSurface)
                 Text("Use biometrics next time", fontFamily = Mono,
-                    fontSize = 10.sp, color = MidGray)
+                    fontSize = 10.sp, color = cs.onSurfaceVariant)
             }
         }
-
         Spacer(Modifier.height(4.dp))
-
         Button(
-            onClick = onSignIn,
-            enabled = !uiState.isLoading,
+            onClick = onSignIn, enabled = !uiState.isLoading,
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Black,
-                disabledContainerColor = LightGray
+                containerColor = cs.primary,
+                disabledContainerColor = cs.surfaceVariant
             ),
             elevation = ButtonDefaults.buttonElevation(0.dp)
         ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp),
-                    color = White, strokeWidth = 2.dp)
+                    color = cs.onPrimary, strokeWidth = 2.dp)
             } else {
                 Text("Sign In", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp, letterSpacing = 1.sp, color = White)
+                    fontSize = 13.sp, letterSpacing = 1.sp, color = cs.onPrimary)
             }
         }
     }
 }
 
-// ── Shared text field ─────────────────────────────────────────────────────────
-
 @Composable
 private fun MinimalTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    placeholder: String,
-    isPassword: Boolean = false,
-    isPasswordVisible: Boolean = false,
+    value: String, onValueChange: (String) -> Unit,
+    label: String, placeholder: String,
+    isPassword: Boolean = false, isPasswordVisible: Boolean = false,
     onTogglePassword: () -> Unit = {},
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
+    val cs = MaterialTheme.colorScheme
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(label, fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 10.sp,
-            letterSpacing = 1.5.sp, color = MidGray, modifier = Modifier.padding(bottom = 6.dp))
+            letterSpacing = 1.5.sp, color = cs.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 6.dp))
         OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = value, onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder, fontFamily = Mono, fontSize = 13.sp, color = LightGray) },
+            placeholder = { Text(placeholder, fontFamily = Mono, fontSize = 13.sp,
+                color = cs.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine = true,
             shape = RoundedCornerShape(8.dp),
             visualTransformation = if (isPassword && !isPasswordVisible)
@@ -318,22 +259,20 @@ private fun MinimalTextField(
             trailingIcon = if (isPassword) {
                 {
                     IconButton(onClick = onTogglePassword) {
-                        Icon(
-                            if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            null, tint = MidGray, modifier = Modifier.size(18.dp)
-                        )
+                        Icon(if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
                     }
                 }
             } else null,
             keyboardOptions = keyboardOptions,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Black,
-                unfocusedBorderColor = BorderDefault,
-                focusedContainerColor = White,
-                unfocusedContainerColor = White,
-                focusedTextColor = Black,
-                unfocusedTextColor = Black,
-                cursorColor = Black
+                focusedBorderColor = cs.primary,
+                unfocusedBorderColor = cs.outline,
+                focusedContainerColor = cs.surface,
+                unfocusedContainerColor = cs.surface,
+                focusedTextColor = cs.onSurface,
+                unfocusedTextColor = cs.onSurface,
+                cursorColor = cs.primary
             )
         )
     }

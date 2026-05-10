@@ -2,21 +2,21 @@ package com.clubeve.cc.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,11 +33,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.clubeve.cc.ui.theme.Black
 import com.clubeve.cc.ui.theme.DarkBg
 import com.clubeve.cc.ui.theme.DarkBorder
 import com.clubeve.cc.ui.theme.DarkSurface
@@ -50,85 +48,55 @@ import kotlinx.coroutines.launch
 import kotlin.math.hypot
 import kotlin.math.max
 
-/**
- * Floating circular theme toggle — bottom-right corner.
- *
- * On tap:
- *  1. A full-screen overlay (coloured with the INCOMING theme's background)
- *     expands as a circle from the button's exact centre — matching the
- *     web clip-path wipe effect.
- *  2. Halfway through the animation the theme flips (hidden under the overlay).
- *  3. The overlay shrinks back to nothing, revealing the new theme.
- *  4. A "Light mode" / "Dark mode" pill label fades in briefly.
- */
 @Composable
 fun ThemeToggleFab() {
     val isDark = ThemeState.isDark
     val scope  = rememberCoroutineScope()
-    val density = LocalDensity.current
 
-    // Radius of the wipe circle (0 → maxR → 0)
-    val wipeRadius = remember { Animatable(0f) }
-    // Colour of the wipe overlay (incoming theme bg)
-    var wipeColor by remember { mutableStateOf(Color.Transparent) }
-    // Whether the overlay is visible at all
+    val wipeRadius  = remember { Animatable(0f) }
+    var wipeColor   by remember { mutableStateOf(Color.Transparent) }
     var wipeVisible by remember { mutableStateOf(false) }
-    // Button centre in root coordinates (px)
     var btnCenterPx by remember { mutableStateOf(Offset.Zero) }
-    // Screen diagonal — computed once the button is placed
-    var screenDiag by remember { mutableFloatStateOf(2000f) }
+    var screenDiag  by remember { mutableFloatStateOf(2000f) }
 
-    var showLabel by remember { mutableStateOf(false) }
-    var busy      by remember { mutableStateOf(false) }
+    // Label shown in center during wipe
+    var labelText   by remember { mutableStateOf("") }
+    var labelAlpha  by remember { mutableFloatStateOf(0f) }
+    val animAlpha   by animateFloatAsState(labelAlpha, tween(200), label = "alpha")
 
-    // Auto-hide label
-    LaunchedEffect(showLabel) {
-        if (showLabel) { delay(1400); showLabel = false }
-    }
+    var busy by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
 
-        // ── Full-screen wipe overlay ──────────────────────────────────────────
+        // ── Full-screen wipe circle ───────────────────────────────────────────
         if (wipeVisible) {
             Canvas(Modifier.fillMaxSize()) {
-                drawCircle(
-                    color  = wipeColor,
-                    radius = wipeRadius.value,
-                    center = btnCenterPx
-                )
+                drawCircle(color = wipeColor, radius = wipeRadius.value, center = btnCenterPx)
+            }
+            // Centered mode label during wipe
+            if (animAlpha > 0f) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = labelText,
+                        fontFamily = Mono,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 28.sp,
+                        letterSpacing = 2.sp,
+                        color = if (isDark) DarkTextPrimary else White,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                        maxLines = 1
+                    )
+                }
             }
         }
 
-        // ── FAB + label anchored to bottom-end ────────────────────────────────
+        // ── FAB ───────────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 24.dp, end = 20.dp),
             contentAlignment = Alignment.BottomEnd
         ) {
-            // Mode label pill — appears just to the left of the button
-            if (showLabel) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isDark) DarkSurface else Black,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(x = (-62).dp, y = (-10).dp)
-                ) {
-                    Text(
-                        text = if (isDark) "Dark mode" else "Light mode",
-                        fontFamily = Mono,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        letterSpacing = 0.5.sp,
-                        color = if (isDark) DarkTextPrimary else White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-            }
-
-            // Circular FAB
             Surface(
                 shape = CircleShape,
                 color = if (isDark) DarkSurface else White,
@@ -141,21 +109,15 @@ fun ThemeToggleFab() {
                         shape = CircleShape
                     )
                     .onGloballyPositioned { coords ->
-                        // Capture button centre in root px — used as wipe origin
-                        val pos  = coords.positionInRoot()
-                        val w    = coords.size.width.toFloat()
-                        val h    = coords.size.height.toFloat()
+                        val pos = coords.positionInRoot()
+                        val w   = coords.size.width.toFloat()
+                        val h   = coords.size.height.toFloat()
                         btnCenterPx = Offset(pos.x + w / 2f, pos.y + h / 2f)
-
-                        // Diagonal from button centre to farthest screen corner
-                        val rootSize = coords.parentLayoutCoordinates
-                            ?.size ?: return@onGloballyPositioned
-                        val sw = rootSize.width.toFloat()
-                        val sh = rootSize.height.toFloat()
+                        val rootSize = coords.parentLayoutCoordinates?.size ?: return@onGloballyPositioned
                         screenDiag = hypot(
-                            max(btnCenterPx.x, sw - btnCenterPx.x),
-                            max(btnCenterPx.y, sh - btnCenterPx.y)
-                        ) + 8f   // +8 px safety margin
+                            max(btnCenterPx.x, rootSize.width  - btnCenterPx.x),
+                            max(btnCenterPx.y, rootSize.height - btnCenterPx.y)
+                        ) + 8f
                     }
             ) {
                 IconButton(
@@ -165,25 +127,34 @@ fun ThemeToggleFab() {
                         val next = !isDark
 
                         scope.launch {
-                            val DURATION = 700
-                            val HALF     = DURATION / 2
+                            val DURATION = 650
 
-                            // Overlay colour = incoming theme background
                             wipeColor   = if (next) DarkBg else White
+                            labelText   = if (next) "Dark mode" else "Light mode"
                             wipeVisible = true
+                            labelAlpha  = 0f
                             wipeRadius.snapTo(0f)
 
-                            // Expand circle to cover full screen
+                            // Expand circle — fade label in at 30%
+                            launch {
+                                delay((DURATION * 0.3).toLong())
+                                labelAlpha = 1f
+                            }
+
                             wipeRadius.animateTo(
                                 targetValue = screenDiag,
                                 animationSpec = tween(DURATION, easing = FastOutSlowInEasing)
                             )
 
-                            // Flip theme at peak (fully covered)
+                            // Flip theme at peak — fully covered
                             ThemeState.isDark = next
-                            showLabel = true
 
-                            // Collapse circle back to nothing
+                            // Collapse — fade label out at start
+                            launch {
+                                delay(80)
+                                labelAlpha = 0f
+                            }
+
                             wipeRadius.animateTo(
                                 targetValue = 0f,
                                 animationSpec = tween(DURATION, easing = FastOutSlowInEasing)
@@ -198,7 +169,7 @@ fun ThemeToggleFab() {
                     Icon(
                         imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
                         contentDescription = if (isDark) "Switch to light mode" else "Switch to dark mode",
-                        tint = if (isDark) DarkTextPrimary else Black,
+                        tint = if (isDark) DarkTextPrimary else Color(0xFF1A1A1A),
                         modifier = Modifier.size(22.dp)
                     )
                 }
