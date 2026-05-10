@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -79,7 +80,22 @@ fun LoginScreen(
         UpdateDialog(release = release, onDismiss = { pendingRelease = null })
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
+    // "No update available" snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(noUpdateMsg) {
+        if (noUpdateMsg) {
+            snackbarHostState.showSnackbar("You're on the latest version (${BuildConfig.VERSION_NAME})")
+            noUpdateMsg = false
+        }
+    }
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
+        },
+        containerColor = cs.background
+    ) { padding ->
+    Box(modifier = Modifier.fillMaxSize().padding(padding).background(cs.background)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -134,7 +150,49 @@ fun LoginScreen(
                 }
             }
         }
+
+        // ── Bottom-left: Check for updates button ─────────────────────────────
+        TextButton(
+            onClick = {
+                if (!isCheckingUpdate) {
+                    isCheckingUpdate = true
+                    scope.launch {
+                        val release = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+                        isCheckingUpdate = false
+                        if (release != null) pendingRelease = release
+                        else noUpdateMsg = true
+                    }
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 8.dp, bottom = 8.dp)
+        ) {
+            if (isCheckingUpdate) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(12.dp),
+                    color = cs.onSurfaceVariant,
+                    strokeWidth = 1.5.dp
+                )
+                Spacer(Modifier.width(6.dp))
+            } else {
+                Icon(
+                    imageVector = Icons.Default.SystemUpdate,
+                    contentDescription = null,
+                    tint = cs.onSurfaceVariant,
+                    modifier = Modifier.size(13.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(
+                if (isCheckingUpdate) "Checking…" else "v${BuildConfig.VERSION_NAME}",
+                fontFamily = Mono,
+                fontSize = 10.sp,
+                color = cs.onSurfaceVariant
+            )
+        }
     }
+    } // end Scaffold
 }
 
 @Composable

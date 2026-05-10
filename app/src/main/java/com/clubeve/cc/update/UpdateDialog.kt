@@ -1,40 +1,28 @@
 package com.clubeve.cc.update
 
 import android.content.Context
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.clubeve.cc.BuildConfig
+import com.clubeve.cc.ui.theme.Mono
+import com.clubeve.cc.ui.theme.StatusSuccess
 import kotlinx.coroutines.launch
 
-/**
- * Dialog shown when a newer version is available on GitHub Releases.
- *
- * States:
- *  - Idle      → "Update Now" / "Later" buttons
- *  - Downloading → indeterminate or percentage progress bar, no buttons
- *  - Error     → error message + "Retry" / "Cancel"
- *
- * On download completion the system installer is launched automatically.
- */
 @Composable
 fun UpdateDialog(
     release: UpdateChecker.ReleaseInfo,
@@ -42,6 +30,7 @@ fun UpdateDialog(
 ) {
     val context: Context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val cs = MaterialTheme.colorScheme
 
     var isDownloading by remember { mutableStateOf(false) }
     var downloadPercent by remember { mutableIntStateOf(-1) }
@@ -70,46 +59,75 @@ fun UpdateDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isDownloading) onDismiss() },
+        icon = {
+            Icon(Icons.Default.SystemUpdate, null,
+                tint = cs.primary, modifier = Modifier.size(28.dp))
+        },
         title = {
-            Text("Update available — v${release.latestVersion}")
+            Text("Update Available", fontFamily = Mono,
+                fontWeight = FontWeight.Black, fontSize = 16.sp)
         },
         text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Version comparison row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, cs.outline, RoundedCornerShape(8.dp))
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("CURRENT", fontFamily = Mono, fontSize = 9.sp,
+                            letterSpacing = 1.sp, color = cs.onSurfaceVariant)
+                        Spacer(Modifier.height(4.dp))
+                        Text("v${BuildConfig.VERSION_NAME}", fontFamily = Mono,
+                            fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                            color = cs.onSurface)
+                    }
+                    Text("→", fontSize = 18.sp, color = cs.onSurfaceVariant)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("NEW", fontFamily = Mono, fontSize = 9.sp,
+                            letterSpacing = 1.sp, color = StatusSuccess)
+                        Spacer(Modifier.height(4.dp))
+                        Text("v${release.latestVersion}", fontFamily = Mono,
+                            fontWeight = FontWeight.Black, fontSize = 14.sp,
+                            color = StatusSuccess)
+                    }
+                }
+
                 when {
                     errorMessage != null -> {
-                        Text(
-                            "Download failed: $errorMessage",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text("Download failed: $errorMessage",
+                            color = cs.error, fontFamily = Mono, fontSize = 12.sp)
                     }
                     isDownloading -> {
                         Text(
                             if (downloadPercent >= 0) "Downloading… $downloadPercent%"
                             else "Downloading…",
-                            style = MaterialTheme.typography.bodySmall
+                            fontFamily = Mono, fontSize = 12.sp, color = cs.onSurface
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(4.dp))
                         if (downloadPercent >= 0) {
                             LinearProgressIndicator(
                                 progress = { downloadPercent / 100f },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                color = cs.primary
                             )
                         } else {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(),
+                                color = cs.primary)
                         }
                     }
                     else -> {
-                        if (release.releaseNotes.isNotBlank()) {
-                            Text(
-                                release.releaseNotes,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
+                        if (release.releaseNotes.isNotBlank() &&
+                            release.releaseNotes != "Bug fixes and improvements.") {
+                            Text(release.releaseNotes, fontFamily = Mono,
+                                fontSize = 11.sp, color = cs.onSurfaceVariant)
                         }
                     }
                 }
@@ -119,19 +137,30 @@ fun UpdateDialog(
             when {
                 isDownloading -> { /* no buttons while downloading */ }
                 errorMessage != null -> {
-                    TextButton(onClick = { startDownload() }) { Text("Retry") }
+                    Button(onClick = { startDownload() },
+                        colors = ButtonDefaults.buttonColors(containerColor = cs.primary)) {
+                        Text("Retry", fontFamily = Mono, fontWeight = FontWeight.Bold,
+                            color = cs.onPrimary)
+                    }
                 }
                 else -> {
-                    TextButton(onClick = { startDownload() }) { Text("Update now") }
+                    Button(onClick = { startDownload() },
+                        colors = ButtonDefaults.buttonColors(containerColor = cs.primary)) {
+                        Text("Update Now", fontFamily = Mono, fontWeight = FontWeight.Bold,
+                            color = cs.onPrimary)
+                    }
                 }
             }
         },
         dismissButton = {
             if (!isDownloading) {
                 TextButton(onClick = onDismiss) {
-                    Text(if (errorMessage != null) "Cancel" else "Later")
+                    Text(if (errorMessage != null) "Cancel" else "Later",
+                        fontFamily = Mono, color = cs.onSurfaceVariant)
                 }
             }
-        }
+        },
+        containerColor = cs.surface,
+        shape = RoundedCornerShape(16.dp)
     )
 }
