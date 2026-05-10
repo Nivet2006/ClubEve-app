@@ -191,7 +191,7 @@ fun EventDetailScreen(
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(8.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, cs.primary),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onBackground)
                     ) {
                         Icon(Icons.Default.People, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
@@ -208,7 +208,7 @@ fun EventDetailScreen(
                     shape = RoundedCornerShape(8.dp),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp, if (isFetching) cs.outline else cs.primary),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onBackground)
                 ) {
                     if (isFetching) {
                         CircularProgressIndicator(modifier = Modifier.size(14.dp),
