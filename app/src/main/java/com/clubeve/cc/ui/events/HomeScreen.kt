@@ -231,7 +231,7 @@ fun HomeScreen(
                             fontWeight = FontWeight.Black,
                             fontSize = 14.sp,
                             letterSpacing = 2.sp,
-                            color = if (isGlass) GlassAccent else cs.onBackground
+                            color = if (isGlass) GlassState.glassAccentColor else cs.onBackground
                         )
                         if (state.lastSyncedAt > 0L) {
                             Text(
