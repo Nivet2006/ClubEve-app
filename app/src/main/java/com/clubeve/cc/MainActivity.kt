@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.clubeve.cc.data.remote.SupabaseClientProvider
 import com.clubeve.cc.models.Profile
@@ -98,7 +99,8 @@ class MainActivity : AppCompatActivity() {
                     var pendingRelease by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
                     // Attendance sheet state — owned here so FAB is in the same Box as ThemeToggleFab
                     var showStudentAttendance by remember { mutableStateOf(false) }
-                    val isStudentHome = startDestination == Screen.StudentHome.route
+                    val currentBackStack by navController.currentBackStackEntryAsState()
+                    val isStudentHome = currentBackStack?.destination?.route == Screen.StudentHome.route
 
                     // Check for update on every launch
                     LaunchedEffect(Unit) {
