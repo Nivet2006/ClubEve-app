@@ -7,7 +7,6 @@ import com.clubeve.cc.SessionManager
 import com.clubeve.cc.data.local.AppDatabase
 import com.clubeve.cc.data.remote.SupabaseClientProvider
 import com.clubeve.cc.models.Attendee
-import com.clubeve.cc.models.IdOnly
 import com.clubeve.cc.models.Profile
 import com.clubeve.cc.models.Registration
 import io.github.jan.supabase.postgrest.from
@@ -112,23 +111,10 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
 
             try {
                 val userId = SessionManager.currentUserId
-                val assigned = client.from("pr_event_assignments")
-                    .select(columns = Columns.list("id")) {
-                        filter {
-                            eq("pr_id", userId)
-                            eq("event_id", currentEventId)
-                        }
-                    }
-                    .decodeList<IdOnly>()
-
-                if (assigned.isEmpty()) {
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            syncStatus = SyncStatus.SYNCED,
-                            error = "Access denied: you are not assigned to this event."
-                        )
-                    }
+                if (userId.isBlank()) {
+                    // Session not ready yet — retry after a short delay
+                    delay(500)
+                    loadAttendees(silent)
                     return@launch
                 }
 
@@ -152,14 +138,19 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
                     return@launch
                 }
 
-                val studentIds = registrations.map { it.studentId }
-                val profiles = client.from("profiles")
-                    .select(columns = Columns.list("id", "full_name", "usn", "department", "semester", "year")) {
-                        filter { isIn("id", studentIds) }
-                    }
-                    .decodeList<Profile>()
+                // Only fetch profiles for registrations that have a non-blank student_id
+                val studentIds = registrations.map { it.studentId }.filter { it.isNotBlank() }
 
-                val profileMap = profiles.associateBy { it.id }
+                val profileMap: Map<String, Profile> = if (studentIds.isNotEmpty()) {
+                    client.from("profiles")
+                        .select(columns = Columns.list("id", "full_name", "usn", "department", "semester", "year")) {
+                            filter { isIn("id", studentIds) }
+                        }
+                        .decodeList<Profile>()
+                        .associateBy { it.id }
+                } else {
+                    emptyMap()
+                }
 
                 val attendees = registrations.map { reg ->
                     val profile = profileMap[reg.studentId]
@@ -188,7 +179,7 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
                 subscribeRealtime(currentEventId)
 
             } catch (e: Exception) {
-                // Remote call failed — fall back to local cache and mark as offline
+                android.util.Log.e("AttendeeVM", "Remote load failed, falling back to cache", e)
                 loadAttendeesFromCache()
             }
         }
