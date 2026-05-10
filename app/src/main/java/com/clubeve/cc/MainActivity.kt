@@ -45,6 +45,9 @@ import com.clubeve.cc.ui.navigation.Screen
 import com.clubeve.cc.ui.theme.ClubEveTheme
 import com.clubeve.cc.ui.theme.DarkBorder
 import com.clubeve.cc.ui.theme.DarkSurface
+import com.clubeve.cc.ui.theme.GlassBorderColor
+import com.clubeve.cc.ui.theme.GlassColorStore
+import com.clubeve.cc.ui.theme.GlassSurface
 import com.clubeve.cc.ui.theme.GlassState
 import com.clubeve.cc.ui.theme.ThemeState
 import com.clubeve.cc.ui.theme.White
@@ -112,6 +115,13 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
+                    // Load saved glass accent color from DataStore
+                    LaunchedEffect(Unit) {
+                        GlassColorStore.accentColorFlow(applicationContext).collect { argb ->
+                            GlassState.glassAccentColor = androidx.compose.ui.graphics.Color(argb.toInt())
+                        }
+                    }
+
                     // Determine start destination + start assignment watcher after login
                     LaunchedEffect(Unit) {
                         val client = SupabaseClientProvider.client
@@ -159,14 +169,14 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
 
-                    // Hide the theme toggle FAB when glassmorphism is active
-                    if (!isGlass) {
-                        ThemeToggleFab()
-                    }
+                    // Theme toggle FAB (bottom-right).
+                    // In normal mode: dark/light toggle with wipe animation.
+                    // In glass mode: palette button to customize accent color.
+                    ThemeToggleFab()
 
                     // Attendance FAB — bottom-left, symmetric with ThemeToggleFab (bottom-right)
-                    // Only shown on the student home screen, hidden in glass mode
-                    if (isStudentHome && !isGlass) {
+                    // Shown on the student home screen in all modes (normal + glass)
+                    if (isStudentHome) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -175,13 +185,16 @@ class MainActivity : AppCompatActivity() {
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = if (ThemeState.isDark) DarkSurface else White,
+                                color = if (isGlass) GlassSurface
+                                        else if (ThemeState.isDark) DarkSurface
+                                        else White,
                                 shadowElevation = 8.dp,
                                 modifier = Modifier
                                     .size(52.dp)
                                     .border(
                                         1.dp,
-                                        if (ThemeState.isDark) DarkBorder
+                                        if (isGlass) GlassBorderColor
+                                        else if (ThemeState.isDark) DarkBorder
                                         else androidx.compose.ui.graphics.Color(0x1F000000),
                                         CircleShape
                                     )
@@ -192,7 +205,8 @@ class MainActivity : AppCompatActivity() {
                                     Icon(
                                         imageVector = Icons.Default.BarChart,
                                         contentDescription = "My Attendance",
-                                        tint = MaterialTheme.colorScheme.primary,
+                                        tint = if (isGlass) GlassState.glassAccentColor
+                                               else MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }

@@ -25,6 +25,9 @@ object ThemeState {
 object GlassState {
     var isGlass by mutableStateOf(false)
     fun toggle() { isGlass = !isGlass }
+
+    // Dynamic accent — defaults to soft violet, overwritten from DataStore on app start
+    var glassAccentColor by mutableStateOf(Color(0xFF9B8FFF))
 }
 
 val LocalIsDark = compositionLocalOf { false }
@@ -76,10 +79,10 @@ private val DarkColorScheme = darkColorScheme(
 // ── Glassmorphism color scheme ────────────────────────────────────────────────
 // Uses the dark scheme as base but overrides surface/background with translucent glass values.
 // All screens that use MaterialTheme.colorScheme tokens automatically get the glass look.
-private val GlassColorScheme = darkColorScheme(
-    primary            = GlassAccent,
+private fun glassColorScheme(accent: Color) = darkColorScheme(
+    primary            = accent,
     onPrimary          = GlassOnAccent,
-    primaryContainer   = GlassAccentContainer,
+    primaryContainer   = accent.copy(alpha = 0.33f),
     onPrimaryContainer = GlassTextPrimary,
     secondary          = GlassTextMuted,
     onSecondary        = GlassBg,
@@ -103,7 +106,7 @@ fun ClubEveTheme(content: @Composable () -> Unit) {
     val isGlass = GlassState.isGlass
 
     val colorScheme = when {
-        isGlass -> GlassColorScheme
+        isGlass -> glassColorScheme(GlassState.glassAccentColor)
         isDark  -> DarkColorScheme
         else    -> LightColorScheme
     }

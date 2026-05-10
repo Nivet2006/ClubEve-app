@@ -78,7 +78,9 @@ Two roles, one app:
 ### Theme
 
 - Full light and dark mode with a smooth circular wipe animation (bottom-right FAB)
-- **Glassmorphism mode** — deep purple-blue translucent palette; toggled by tapping the "MY EVENTS" title 6 times within 3 seconds (easter egg, available in both PR and student flows). The FAB is hidden in glass mode.
+- **Glassmorphism mode** — deep purple-blue translucent palette; toggled by tapping the "MY EVENTS" title 6 times within 3 seconds (easter egg, available in both PR and student flows). The accent color is dynamic — `GlassState.glassAccentColor` drives the entire glass color scheme at runtime, so changing the accent recomposes the theme instantly without a restart.
+- **Glass accent color picker** — in glassmorphism mode, the bottom-right FAB switches from the dark/light toggle to a palette icon. Tapping it opens a `GlassColorPickerDialog` with a full HSV color wheel (hue ring, saturation/value square, brightness slider, live preview swatch), all styled to match the glass palette. The chosen color is persisted via `GlassColorStore` and restored on next launch.
+- The bottom-right theme FAB and the bottom-left attendance FAB (student flow) are both visible in all modes — normal, dark, and glassmorphism. In glass mode the attendance FAB uses `GlassSurface` background, `GlassBorderColor` border, and the current glass accent color for its icon tint.
 
 ---
 
@@ -108,6 +110,7 @@ The app talks to a Supabase backend (PostgreSQL + Auth). Events, registrations, 
 | Backend | Supabase 3.0.3 (Auth + Postgrest + Realtime) |
 | Camera | CameraX 1.4.1 + ML Kit Barcode 17.3.0 |
 | Security | security-crypto 1.1.0-alpha06 + biometric 1.1.0 |
+| Storage | DataStore Preferences 1.1.1 |
 
 ---
 
