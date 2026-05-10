@@ -53,3 +53,17 @@ val GlassWhite      = Color(0x1A000000)
 val GlassBorder     = Color(0x33000000)
 val PrimaryColor    = Black
 val ErrorColor      = StatusError
+
+// ── Glassmorphism palette ─────────────────────────────────────────────────────
+// Deep purple-blue gradient base
+val GlassBg              = Color(0xFF0D0D1A)   // near-black with blue tint
+val GlassSurface         = Color(0x33FFFFFF)   // frosted white glass panel
+val GlassSurfaceRaised   = Color(0x4DFFFFFF)   // slightly more opaque raised panel
+val GlassBorderColor     = Color(0x66FFFFFF)   // bright glass edge
+val GlassBorderSubtle    = Color(0x33FFFFFF)   // subtle glass edge
+val GlassTextPrimary     = Color(0xFFF0F0FF)   // near-white with blue tint
+val GlassTextMuted       = Color(0xAAC8C8FF)   // muted lavender text
+val GlassAccent          = Color(0xFF9B8FFF)   // soft violet accent
+val GlassOnAccent        = Color(0xFF0D0D1A)   // dark on accent
+val GlassAccentContainer = Color(0x559B8FFF)   // translucent accent container
+val GlassError           = Color(0xFFFF6B8A)   // rose error

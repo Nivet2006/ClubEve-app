@@ -262,9 +262,10 @@ private fun formatTime(iso: String): String = try {
 
 @Composable
 fun SyncStatusBadge(syncStatus: SyncStatus) {
+    val cs = MaterialTheme.colorScheme
     val bgColor = when (syncStatus) {
-        SyncStatus.SYNCED  -> Color(0xFF1A1A1A)
-        SyncStatus.SYNCING -> Color(0xFF1A1A1A)
+        SyncStatus.SYNCED  -> cs.surfaceVariant
+        SyncStatus.SYNCING -> cs.surfaceVariant
         SyncStatus.OFFLINE -> Color(0xFFFF9500)
     }
     val icon = when (syncStatus) {
@@ -276,6 +277,10 @@ fun SyncStatusBadge(syncStatus: SyncStatus) {
         SyncStatus.SYNCED  -> "Live"
         SyncStatus.SYNCING -> "Syncing…"
         SyncStatus.OFFLINE -> "Offline — cached data"
+    }
+    val textColor = when (syncStatus) {
+        SyncStatus.OFFLINE -> Color.White
+        else               -> cs.onSurfaceVariant
     }
     val infiniteTransition = rememberInfiniteTransition(label = "sync_spin")
     val rotation by infiniteTransition.animateFloat(
@@ -289,12 +294,12 @@ fun SyncStatusBadge(syncStatus: SyncStatus) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = Color.White,
+            Icon(imageVector = icon, contentDescription = null, tint = textColor,
                 modifier = Modifier.size(12.dp)
                     .then(if (syncStatus == SyncStatus.SYNCING) Modifier.rotate(rotation) else Modifier))
             Spacer(Modifier.width(6.dp))
             Text(label, fontFamily = Mono, fontSize = 10.sp,
-                letterSpacing = 1.sp, color = Color.White)
+                letterSpacing = 1.sp, color = textColor)
         }
     }
 }

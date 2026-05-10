@@ -21,7 +21,14 @@ object ThemeState {
     fun toggle() { isDark = !isDark }
 }
 
+// ── Glassmorphism easter-egg state ────────────────────────────────────────────
+object GlassState {
+    var isGlass by mutableStateOf(false)
+    fun toggle() { isGlass = !isGlass }
+}
+
 val LocalIsDark = compositionLocalOf { false }
+val LocalIsGlass = compositionLocalOf { false }
 
 // ── Color schemes ─────────────────────────────────────────────────────────────
 private val LightColorScheme = lightColorScheme(
@@ -66,20 +73,55 @@ private val DarkColorScheme = darkColorScheme(
     scrim              = Color(0x66000000)
 )
 
+// ── Glassmorphism color scheme ────────────────────────────────────────────────
+// Uses the dark scheme as base but overrides surface/background with translucent glass values.
+// All screens that use MaterialTheme.colorScheme tokens automatically get the glass look.
+private val GlassColorScheme = darkColorScheme(
+    primary            = GlassAccent,
+    onPrimary          = GlassOnAccent,
+    primaryContainer   = GlassAccentContainer,
+    onPrimaryContainer = GlassTextPrimary,
+    secondary          = GlassTextMuted,
+    onSecondary        = GlassBg,
+    tertiary           = GlassTextMuted,
+    error              = GlassError,
+    onError            = GlassBg,
+    background         = Color.Transparent,   // let the gradient in MainActivity show through
+    surface            = GlassSurface,
+    surfaceVariant     = GlassSurfaceRaised,
+    onBackground       = GlassTextPrimary,
+    onSurface          = GlassTextPrimary,
+    onSurfaceVariant   = GlassTextMuted,
+    outline            = GlassBorderColor,
+    outlineVariant     = GlassBorderSubtle,
+    scrim              = Color(0x88000000)
+)
+
 @Composable
 fun ClubEveTheme(content: @Composable () -> Unit) {
-    val isDark = ThemeState.isDark
-    val colorScheme = if (isDark) DarkColorScheme else LightColorScheme
+    val isDark  = ThemeState.isDark
+    val isGlass = GlassState.isGlass
+
+    val colorScheme = when {
+        isGlass -> GlassColorScheme
+        isDark  -> DarkColorScheme
+        else    -> LightColorScheme
+    }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDark
+            // Glass mode always uses dark status bar (light icons) since bg is dark
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars =
+                !isDark && !isGlass
         }
     }
 
-    CompositionLocalProvider(LocalIsDark provides isDark) {
+    CompositionLocalProvider(
+        LocalIsDark provides isDark,
+        LocalIsGlass provides isGlass
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography  = Typography,

@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
@@ -30,6 +31,7 @@ import com.clubeve.cc.ui.components.ThemeToggleFab
 import com.clubeve.cc.ui.navigation.AppNavGraph
 import com.clubeve.cc.ui.navigation.Screen
 import com.clubeve.cc.ui.theme.ClubEveTheme
+import com.clubeve.cc.ui.theme.GlassState
 import com.clubeve.cc.update.UpdateChecker
 import com.clubeve.cc.update.UpdateDialog
 import io.github.jan.supabase.auth.auth
@@ -51,11 +53,31 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             ClubEveTheme {
-                Box(
+                val isGlass = GlassState.isGlass
+
+                // Glass mode: render a deep purple-blue radial gradient as the persistent
+                // background layer. All screen backgrounds are translucent in glass mode so
+                // this gradient shows through every surface.
+                val bgModifier = if (isGlass) {
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.radialGradient(
+                                colorStops = arrayOf(
+                                    0.0f to androidx.compose.ui.graphics.Color(0xFF1A0A3D),
+                                    0.4f to androidx.compose.ui.graphics.Color(0xFF0D0D2B),
+                                    0.7f to androidx.compose.ui.graphics.Color(0xFF050518),
+                                    1.0f to androidx.compose.ui.graphics.Color(0xFF000008)
+                                )
+                            )
+                        )
+                } else {
                     Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
-                ) {
+                }
+
+                Box(bgModifier) {
                     val navController = rememberNavController()
                     var startDestination by remember { mutableStateOf<String?>(null) }
                     var pendingRelease by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }

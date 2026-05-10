@@ -1,5 +1,6 @@
 package com.clubeve.cc.ui.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +34,7 @@ import com.clubeve.cc.ui.events.HomeScreen
 import com.clubeve.cc.ui.events.HomeViewModel
 import com.clubeve.cc.ui.login.LoginScreen
 import com.clubeve.cc.ui.scanner.ScannerScreen
+import com.clubeve.cc.ui.theme.GlassState
 import com.clubeve.cc.ui.theme.Mono
 import com.clubeve.cc.utils.NetworkMonitor
 
@@ -45,6 +47,7 @@ fun AppNavGraph(
     val isOnline by produceState(initialValue = true) {
         NetworkMonitor(context).isOnlineFlow.collect { value = it }
     }
+    val isGlass = GlassState.isGlass
 
     // Share HomeViewModel across Home and EventDetail so event list is loaded once
     val homeViewModel: HomeViewModel = viewModel()
@@ -76,7 +79,11 @@ fun AppNavGraph(
             }
         }
 
-        NavHost(navController = navController, startDestination = startDestination) {
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = if (isGlass) Modifier.background(Color.Transparent) else Modifier
+        ) {
 
             composable(Screen.Login.route) {
                 LoginScreen(

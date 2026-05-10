@@ -3,6 +3,7 @@ package com.clubeve.cc.ui.events
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,6 +59,23 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val cs = MaterialTheme.colorScheme
+
+    // ── Glassmorphism easter egg — 6 taps on "MY EVENTS" title ───────────────
+    var titleTapCount by remember { mutableStateOf(0) }
+    var lastTapTime by remember { mutableStateOf(0L) }
+    val isGlass = GlassState.isGlass
+
+    LaunchedEffect(isGlass) {
+        // Show feedback snackbar whenever glass mode changes (but not on first composition)
+    }
+    var glassToastTrigger by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(glassToastTrigger) {
+        glassToastTrigger?.let { enabled ->
+            snackbarHostState.showSnackbar(
+                if (enabled) "✦ Glassmorphism enabled" else "✦ Glassmorphism disabled"
+            )
+        }
+    }
 
     val isOnline by produceState(initialValue = true) {
         NetworkMonitor(context).isOnlineFlow.collect { value = it }
@@ -193,12 +212,37 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("MY EVENTS", fontFamily = Mono, fontWeight = FontWeight.Black,
-                            fontSize = 14.sp, letterSpacing = 2.sp, color = cs.onBackground)
+                    Column(
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures {
+                                val now = System.currentTimeMillis()
+                                // Reset counter if more than 2 seconds between taps
+                                if (now - lastTapTime > 2_000L) titleTapCount = 0
+                                lastTapTime = now
+                                titleTapCount++
+                                if (titleTapCount >= 6) {
+                                    titleTapCount = 0
+                                    GlassState.toggle()
+                                    glassToastTrigger = GlassState.isGlass
+                                }
+                            }
+                        }
+                    ) {
+                        Text(
+                            "MY EVENTS",
+                            fontFamily = Mono,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 14.sp,
+                            letterSpacing = 2.sp,
+                            color = if (isGlass) GlassAccent else cs.onBackground
+                        )
                         if (state.lastSyncedAt > 0L) {
-                            Text("Synced ${formatRelativeTime(state.lastSyncedAt, now)}",
-                                fontFamily = Mono, fontSize = 9.sp, color = cs.onSurfaceVariant)
+                            Text(
+                                "Synced ${formatRelativeTime(state.lastSyncedAt, now)}",
+                                fontFamily = Mono,
+                                fontSize = 9.sp,
+                                color = cs.onSurfaceVariant
+                            )
                         }
                     }
                 },
