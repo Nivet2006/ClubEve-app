@@ -81,23 +81,8 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(Black, RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("PR", fontWeight = FontWeight.Black, fontSize = 26.sp,
-                    color = White, fontFamily = Mono)
-            }
-
-            Spacer(Modifier.height(20.dp))
-
             Text("CLUB-EVE", fontFamily = Mono, fontWeight = FontWeight.Black,
                 fontSize = 22.sp, letterSpacing = 2.sp, color = Black)
-            Text("PR Attendance", fontFamily = Mono, fontSize = 11.sp,
-                color = MidGray, letterSpacing = 1.sp)
 
             Spacer(Modifier.height(40.dp))
 
