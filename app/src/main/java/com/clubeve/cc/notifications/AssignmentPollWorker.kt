@@ -89,7 +89,19 @@ class AssignmentPollWorker(ctx: Context, params: WorkerParameters) : CoroutineWo
 
         /** Schedule a periodic poll every 15 minutes. Safe to call multiple times. */
         fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<AssignmentPollWorker>(
+            // Run once immediately to catch any missed assignments (e.g. after login)
+            val immediateRequest = OneTimeWorkRequestBuilder<AssignmentPollWorker>()
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                )
+                .addTag("${TAG}_immediate")
+                .build()
+            WorkManager.getInstance(context).enqueue(immediateRequest)
+
+            // Then schedule periodic every 15 minutes
+            val periodicRequest = PeriodicWorkRequestBuilder<AssignmentPollWorker>(
                 15, TimeUnit.MINUTES
             )
                 .setConstraints(
@@ -102,8 +114,8 @@ class AssignmentPollWorker(ctx: Context, params: WorkerParameters) : CoroutineWo
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 TAG,
-                ExistingPeriodicWorkPolicy.KEEP,   // don't reset timer if already scheduled
-                request
+                ExistingPeriodicWorkPolicy.KEEP,
+                periodicRequest
             )
         }
 
