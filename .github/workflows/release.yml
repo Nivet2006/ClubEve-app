@@ -33,18 +33,6 @@ jobs:
           restore-keys: gradle-
 
       # ── 4. Write local.properties from secrets ─────────────────────────────
-      #
-      # Add these secrets in:
-      #   GitHub repo → Settings → Secrets and variables → Actions
-      #
-      #   SUPABASE_URL        — your Supabase project URL
-      #   SUPABASE_ANON_KEY   — your Supabase anon key
-      #   APP_GITHUB_OWNER    — your GitHub username / org (e.g. "acme-corp")
-      #   APP_GITHUB_REPO     — this repo name (e.g. "clubeve-cc")
-      #   GITHUB_TOKEN_VALUE  — a fine-grained PAT with "Contents: read" scope
-      #                         (named TOKEN_VALUE to avoid clash with the
-      #                          built-in GITHUB_TOKEN)
-      #
       - name: Write local.properties
         run: |
           cat > local.properties <<EOF
@@ -56,16 +44,10 @@ jobs:
           EOF
 
       # ── 5. Decode keystore ─────────────────────────────────────────────────
-      #
-      # Base64-encode your release keystore and store it as:
-      #   KEYSTORE_BASE64     — base64 of the .jks / .keystore file
-      #   KEYSTORE_PASSWORD   — store password
-      #   KEY_ALIAS           — key alias
-      #   KEY_PASSWORD        — key password
-      #
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/release.keystore
+          echo "Keystore size: $(wc -c < ${{ github.workspace }}/release.keystore) bytes"
 
       # ── 6. Build signed release APK ────────────────────────────────────────
       - name: Make gradlew executable
@@ -79,14 +61,22 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      # ── 7. Rename APK to include version tag ───────────────────────────────
+      # ── 7. Rename APK ──────────────────────────────────────────────────────
       - name: Rename APK
+        id: rename_apk
         run: |
+          echo "=== All APKs built ==="
+          find app/build/outputs/apk -name "*.apk"
           VERSION="${{ github.ref_name }}"
           APK_SRC=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-          echo "Found APK: $APK_SRC"
-          mv "$APK_SRC" app/build/outputs/apk/release/ClubEve-CC-${VERSION}.apk
-          echo "APK renamed to: ClubEve-CC-${VERSION}.apk"
+          if [ -z "$APK_SRC" ]; then
+            echo "ERROR: No APK found in release folder!"
+            exit 1
+          fi
+          DEST="app/build/outputs/apk/release/ClubEve-CC-${VERSION}.apk"
+          mv "$APK_SRC" "$DEST"
+          echo "apk_path=$DEST" >> $GITHUB_OUTPUT
+          echo "Renamed to: $DEST"
 
       # ── 8. Create GitHub Release and upload APK (only on v* tags) ──────────
       - name: Create GitHub Release
@@ -97,11 +87,11 @@ jobs:
           name: "ClubEve CC ${{ github.ref_name }}"
           body: |
             ## ClubEve CC ${{ github.ref_name }}
-            
+
             ### Installation
             1. Download `ClubEve-CC-${{ github.ref_name }}.apk` below
-            2. Enable "Install from unknown sources" on your device
+            2. Enable **Install from unknown sources** on your device
             3. Open the APK to install
-          files: app/build/outputs/apk/release/ClubEve-CC-${{ github.ref_name }}.apk
+          files: ${{ steps.rename_apk.outputs.apk_path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
