@@ -59,7 +59,7 @@ class LoginViewModel : ViewModel() {
     }
 
     /** Called after biometric success — uses stored credentials to sign in */
-    fun loginWithSavedCredentials(context: Context, onSuccess: () -> Unit) {
+    fun loginWithSavedCredentials(context: Context, onSuccess: (role: String) -> Unit) {
         val creds = CredentialStore.load(context) ?: run {
             _uiState.update { it.copy(error = "No saved credentials found. Please sign in manually.") }
             return
@@ -69,7 +69,7 @@ class LoginViewModel : ViewModel() {
     }
 
     /** Called from the manual form Sign In button */
-    fun login(context: Context, onSuccess: () -> Unit) {
+    fun login(context: Context, onSuccess: (role: String) -> Unit) {
         val state = _uiState.value
         if (state.usn.isBlank() || state.password.isBlank()) {
             _uiState.update { it.copy(error = "Please enter your USN and password.") }
@@ -88,7 +88,7 @@ class LoginViewModel : ViewModel() {
     }
 
     private fun performLogin(usn: String, password: String, rememberMe: Boolean,
-                             context: Context, onSuccess: () -> Unit) {
+                             context: Context, onSuccess: (role: String) -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
@@ -136,14 +136,12 @@ class LoginViewModel : ViewModel() {
                     CredentialStore.save(context, usn.uppercase().trim(), password)
                 }
 
-                // Step 6: Store session, save pr_id for background polling, and navigate
+                // Step 6: Store session and navigate — pass role to caller for routing
                 SessionManager.currentUserId = userId
                 SessionManager.currentProfile = profile
-                // Persist pr_id so AssignmentPollWorker works even after logout/app close
                 SessionStore.savePrId(context, userId)
-                AssignmentPollWorker.schedule(context)
                 _uiState.update { it.copy(isLoading = false) }
-                onSuccess()
+                onSuccess(profile.role)
 
             } catch (e: Exception) {
                 try { client.auth.signOut() } catch (_: Exception) {}

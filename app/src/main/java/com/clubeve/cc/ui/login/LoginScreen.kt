@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (role: String) -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -75,7 +75,6 @@ fun LoginScreen(
             }
         }
     }
-
     // Show update dialog if a release was found
     pendingRelease?.let { release ->
         UpdateDialog(release = release, onDismiss = { pendingRelease = null })
@@ -135,8 +134,7 @@ fun LoginScreen(
                     onTogglePassword = viewModel::togglePasswordVisibility,
                     onToggleRememberMe = viewModel::toggleRememberMe,
                     onSignIn = { viewModel.login(context, onLoginSuccess) }
-                )
-            }
+                )            }
 
             AnimatedVisibility(visible = uiState.error != null, enter = fadeIn(), exit = fadeOut()) {
                 Box(

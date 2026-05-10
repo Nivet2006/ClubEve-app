@@ -89,8 +89,13 @@ fun AppNavGraph(
 
             composable(Screen.Login.route) {
                 LoginScreen(
-                    onLoginSuccess = {
-                        navController.navigate(Screen.Home.route) {
+                    onLoginSuccess = { role ->
+                        val destination = if (role == "student") {
+                            Screen.StudentHome.route
+                        } else {
+                            Screen.Home.route  // pr and any other staff role
+                        }
+                        navController.navigate(destination) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
                     }
