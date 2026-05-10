@@ -91,7 +91,13 @@ fun LoginScreen(
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
+            SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp)) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface
+                )
+            }
         },
         containerColor = cs.background
     ) { padding ->
