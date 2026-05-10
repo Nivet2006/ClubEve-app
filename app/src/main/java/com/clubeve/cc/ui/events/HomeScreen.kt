@@ -27,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clubeve.cc.models.Event
 import com.clubeve.cc.sync.SyncConflict
 import com.clubeve.cc.sync.SyncManager
+import com.clubeve.cc.notifications.AssignmentWatcher
 import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.theme.*
 import com.clubeve.cc.utils.NetworkMonitor
@@ -68,6 +69,11 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         if (vm.state.value.events.isEmpty() && !vm.state.value.isLoading) vm.loadEvents()
+        // Start assignment watcher if not already running
+        val userId = com.clubeve.cc.SessionManager.currentUserId
+        if (userId.isNotBlank()) {
+            AssignmentWatcher.start(context, userId, this)
+        }
     }
 
     LaunchedEffect(syncMessage) {

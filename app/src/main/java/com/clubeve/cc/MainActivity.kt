@@ -1,8 +1,12 @@
 package com.clubeve.cc
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -14,9 +18,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.clubeve.cc.data.remote.SupabaseClientProvider
 import com.clubeve.cc.models.Profile
+import com.clubeve.cc.notifications.AssignmentWatcher
 import com.clubeve.cc.ui.components.ThemeToggleFab
 import com.clubeve.cc.ui.navigation.AppNavGraph
 import com.clubeve.cc.ui.navigation.Screen
@@ -25,20 +32,23 @@ import com.clubeve.cc.update.UpdateChecker
 import com.clubeve.cc.update.UpdateDialog
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* granted or denied — watcher runs either way, notify() handles SecurityException */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        requestNotificationPermissionIfNeeded()
 
         setContent {
-            // ClubEveTheme reads ThemeState.isDark directly — recomposes on every toggle
             ClubEveTheme {
-                // Read background INSIDE ClubEveTheme so it recomposes with the theme
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -58,7 +68,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
-                    // Determine start destination
+                    // Determine start destination + start assignment watcher after login
                     LaunchedEffect(Unit) {
                         val client = SupabaseClientProvider.client
                         val user = client.auth.currentUserOrNull()
@@ -76,6 +86,12 @@ class MainActivity : AppCompatActivity() {
                                         SessionManager.currentUserId = user.id
                                         SessionManager.currentProfile = profile
                                         startDestination = Screen.Home.route
+                                        // Start watching for new assignments
+                                        AssignmentWatcher.start(
+                                            context = applicationContext,
+                                            prUserId = user.id,
+                                            scope = lifecycleScope
+                                        )
                                     } else {
                                         try { client.auth.signOut() } catch (_: Exception) {}
                                         SessionManager.clear()
@@ -98,9 +114,22 @@ class MainActivity : AppCompatActivity() {
                         UpdateDialog(release = release, onDismiss = { pendingRelease = null })
                     }
 
-                    // Always on top — reads ThemeState.isDark directly
                     ThemeToggleFab()
                 }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        AssignmentWatcher.stop()
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }

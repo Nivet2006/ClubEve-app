@@ -1,6 +1,7 @@
 package com.clubeve.cc
 
 import android.app.Application
+import com.clubeve.cc.notifications.AssignmentNotifier
 import com.clubeve.cc.sync.AttendanceSyncWorker
 import com.clubeve.cc.utils.NetworkMonitor
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +16,7 @@ class ClubEveApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AssignmentNotifier.createChannel(this)
         networkMonitor.isOnlineFlow
             .onEach { isOnline ->
                 if (isOnline) AttendanceSyncWorker.schedule(this)
