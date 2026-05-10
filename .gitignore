@@ -50,7 +50,7 @@ desktop.ini
 .agent/
 
 # ─── Docs ────────────────────────────────────────────────────────────────────
-README.md
+PRIVATEREADME.md
 
 # ─── Local asset staging (not part of the app bundle) ────────────────────────
 input_images/

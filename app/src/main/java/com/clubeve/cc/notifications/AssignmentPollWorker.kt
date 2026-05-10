@@ -1,125 +1,99 @@
 package com.clubeve.cc.notifications
 
 import android.content.Context
+import android.util.Log
 import androidx.work.*
 import com.clubeve.cc.data.remote.SupabaseClientProvider
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
-import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-/**
- * Periodic WorkManager worker that polls Supabase every 15 minutes for new
- * pr_event_assignments rows. Fires a local notification for each new assignment.
- * Runs even when the app is closed, as long as the device has internet.
- */
+@Serializable
+private data class AssignmentRow(
+    val id: String,
+    val event_id: String
+)
+
+@Serializable
+private data class EventRow(
+    val title: String
+)
+
 class AssignmentPollWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
 
     override suspend fun doWork(): Result {
-        val prId = SessionStore.getPrId(applicationContext) ?: return Result.success()
+        val prId = SessionStore.getPrId(applicationContext)
+        if (prId.isNullOrBlank()) {
+            Log.d(TAG, "No pr_id — skipping")
+            return Result.success()
+        }
 
         return try {
             val client = SupabaseClientProvider.client
-            val lastSeen = SessionStore.getLastSeen(applicationContext)
+            val seenIds = SessionStore.getSeenAssignmentIds(applicationContext).toMutableSet()
 
-            // Fetch assignments for this PR user, ordered by created_at desc
-            val response = client.from("pr_event_assignments")
-                .select(columns = Columns.list("id", "event_id", "created_at")) {
+            // Fetch all assignments for this PR
+            val assignments = client.from("pr_event_assignments")
+                .select(columns = Columns.list("id", "event_id")) {
                     filter { eq("pr_id", prId) }
-                    order("created_at", Order.DESCENDING)
-                    limit(10)
                 }
-                .data
+                .decodeList<AssignmentRow>()
 
-            val assignments = Json.parseToJsonElement(response).jsonArray
+            Log.d(TAG, "Found ${assignments.size} assignments, ${seenIds.size} already seen")
 
-            var newestTimestamp = lastSeen
-
-            for (item in assignments) {
-                val obj = item.jsonObject
-                val createdAt = obj["created_at"]?.jsonPrimitive?.content ?: continue
-                val eventId   = obj["event_id"]?.jsonPrimitive?.content ?: continue
-
-                // Skip if we've already notified about this or older assignments
-                if (lastSeen != null && !isNewer(createdAt, lastSeen)) continue
+            for (assignment in assignments) {
+                if (assignment.id in seenIds) continue
 
                 // Fetch event title
                 val eventTitle = try {
-                    val eventResp = client.from("events")
+                    client.from("events")
                         .select(columns = Columns.list("title")) {
-                            filter { eq("id", eventId) }
+                            filter { eq("id", assignment.event_id) }
                         }
-                        .data
-                    Json.parseToJsonElement(eventResp)
-                        .jsonArray.firstOrNull()
-                        ?.jsonObject?.get("title")?.jsonPrimitive?.content
-                        ?: "New Event"
-                } catch (_: Exception) { "New Event" }
-
-                AssignmentNotifier.notify(applicationContext, eventTitle)
-
-                // Track the newest timestamp we've notified about
-                if (newestTimestamp == null || isNewer(createdAt, newestTimestamp)) {
-                    newestTimestamp = createdAt
+                        .decodeList<EventRow>()
+                        .firstOrNull()?.title ?: "New Event"
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to fetch event: ${e.message}")
+                    "New Event"
                 }
+
+                Log.d(TAG, "Notifying: $eventTitle (id=${assignment.id})")
+                AssignmentNotifier.notify(applicationContext, eventTitle)
+                seenIds.add(assignment.id)
             }
 
-            // Save the newest seen timestamp so we don't re-notify
-            newestTimestamp?.let { SessionStore.saveLastSeen(applicationContext, it) }
-
+            SessionStore.saveSeenAssignmentIds(applicationContext, seenIds)
             Result.success()
-        } catch (_: Exception) {
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Poll error: ${e.message}")
             Result.retry()
         }
     }
 
-    /** Returns true if [a] is strictly after [b] (ISO-8601 comparison). */
-    private fun isNewer(a: String, b: String): Boolean = try {
-        Instant.parse(a).isAfter(Instant.parse(b))
-    } catch (_: Exception) { false }
-
     companion object {
-        const val TAG = "assignment_poll"
+        const val TAG = "AssignmentPoll"
 
-        /** Schedule a periodic poll every 15 minutes. Safe to call multiple times. */
         fun schedule(context: Context) {
-            // Run once immediately to catch any missed assignments (e.g. after login)
-            val immediateRequest = OneTimeWorkRequestBuilder<AssignmentPollWorker>()
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build()
-                )
-                .addTag("${TAG}_immediate")
-                .build()
-            WorkManager.getInstance(context).enqueue(immediateRequest)
-
-            // Then schedule periodic every 15 minutes
-            val periodicRequest = PeriodicWorkRequestBuilder<AssignmentPollWorker>(
-                15, TimeUnit.MINUTES
+            // Immediate one-shot — catches all missed assignments right on login
+            WorkManager.getInstance(context).enqueue(
+                OneTimeWorkRequestBuilder<AssignmentPollWorker>()
+                    .setConstraints(Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED).build())
+                    .build()
             )
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build()
-                )
-                .addTag(TAG)
-                .build()
-
+            // Periodic every 15 min for future assignments
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 TAG,
                 ExistingPeriodicWorkPolicy.KEEP,
-                periodicRequest
+                PeriodicWorkRequestBuilder<AssignmentPollWorker>(15, TimeUnit.MINUTES)
+                    .setConstraints(Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED).build())
+                    .build()
             )
         }
 
-        /** Cancel polling — called on logout. */
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(TAG)
         }
