@@ -1,15 +1,52 @@
+# ─── Gradle ──────────────────────────────────────────────────────────────────
+.gradle/
+/build/
+**/build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# ─── Android / IntelliJ ──────────────────────────────────────────────────────
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/planningMode.xml
+# Keep: .idea/gradle.xml, misc.xml, codeStyles/, vcs.xml, runConfigurations.xml
+
+# ─── Local config & secrets ──────────────────────────────────────────────────
 local.properties
+keystore.properties
+*.jks
+*.keystore
+
+# ─── Native build ────────────────────────────────────────────────────────────
+.externalNativeBuild/
+.cxx/
+
+# ─── Captures & profiling ────────────────────────────────────────────────────
+/captures/
+*.hprof
+
+# ─── OS noise ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Kotlin ──────────────────────────────────────────────────────────────────
+.kotlin/
+
+# ─── Merge / patch artifacts ─────────────────────────────────────────────────
+*.orig
+*.rej
+
+# ─── Agent / AI tooling ──────────────────────────────────────────────────────
+.agent/
+
+# ─── Local asset staging (not part of the app bundle) ────────────────────────
+input_images/

@@ -31,6 +31,15 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseKey\"")
+
+        // GitHub release update checker — owner/repo are public, token is optional (private repos only)
+        val githubOwner = localProps.getProperty("GITHUB_OWNER") ?: "Nivet2006"
+        val githubRepo  = localProps.getProperty("GITHUB_REPO")  ?: "ClubEve-app"
+        val githubToken = localProps.getProperty("GITHUB_TOKEN") ?: ""
+
+        buildConfigField("String", "GITHUB_OWNER", "\"$githubOwner\"")
+        buildConfigField("String", "GITHUB_REPO",  "\"$githubRepo\"")
+        buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
     }
 
     buildTypes {
@@ -43,6 +52,17 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Sign with keystore when env vars are present (CI).
+            // Falls back to debug signing locally if they are absent.
+            val storeFile = System.getenv("SIGNING_STORE_FILE")
+            if (storeFile != null) {
+                signingConfig = signingConfigs.create("release").apply {
+                    this.storeFile = file(storeFile)
+                    this.storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
+                    this.keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
+                    this.keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: ""
+                }
+            }
         }
     }
     compileOptions {

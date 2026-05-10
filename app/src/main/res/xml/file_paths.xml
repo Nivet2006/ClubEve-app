@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!--
+        Matches context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        Used by UpdateDownloader to store the downloaded APK before installation.
+    -->
+    <external-files-path
+        name="apk_download"
+        path="Download/" />
+</paths>

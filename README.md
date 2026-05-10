@@ -14,6 +14,7 @@ PR officers use ClubEve App to check in registered students at events. The app s
 - **Attendee list** — View all registrants for an event with check-in status and timestamps
 - **Offline support** — Full offline check-in via local Room cache; events, registrations, and student profiles are cached locally after each successful home screen load so the app remains functional without a network connection. Pending check-ins are synced to Supabase in the background via WorkManager when connectivity is restored
 - **Secure auth** — Role-based login (PR officers only), optional biometric unlock, AES-256 encrypted credential storage
+- **In-app updates** — After a successful login, silently checks the GitHub Releases API for a newer APK and prompts the officer to download if one is available
 
 ## Tech Stack
 
@@ -83,6 +84,22 @@ It also exposes `pendingSyncCount: StateFlow<Int>` (backed by `SyncManager.obser
 
 `AppNavGraph` observes `NetworkMonitor.isOnlineFlow` and renders an amber banner at the top of every screen (except login) whenever the device has no connectivity. The banner shows a `WifiOff` icon and the message "Offline — check-ins will sync when online". Because it lives in the nav graph rather than in any individual screen, it appears consistently regardless of which screen the officer is currently on.
 
+### UpdateChecker
+
+`UpdateChecker` (`update/UpdateChecker.kt`) is a Kotlin `object` that polls the GitHub Releases API to detect whether a newer version of the app is available.
+
+- **API endpoint**: `GET https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest`
+- **Auth**: If `BuildConfig.GITHUB_TOKEN` is non-blank, it is sent as a `Bearer` token — required for private repositories.
+- **Version comparison**: Semantic versioning (`"1.2.3"` vs `"1.1.9"`). Release tags must follow the `v<semver>` pattern (e.g. `v1.2.0`).
+- **Return value**: `ReleaseInfo(latestVersion, apkDownloadUrl, releaseNotes)` when a newer version exists; `null` otherwise. The APK URL is the first `.apk` asset attached to the release.
+- **Error handling**: All network and parse errors are swallowed — a failed check always returns `null` and never disrupts the user's session.
+
+**Trigger**: The check runs automatically on the IO dispatcher immediately after a successful login (role verified, session established). It never blocks the UI thread and does not run on subsequent navigations — only once per login.
+
+**UpdateDialog**: When `UpdateChecker` returns a non-null `ReleaseInfo`, `MainActivity` renders `UpdateDialog` over the nav graph. The dialog presents the new version details and a download prompt. Dismissing it clears the pending release state and does not show the dialog again for that session.
+
+Credentials are injected at build time via `BuildConfig.GITHUB_OWNER`, `BuildConfig.GITHUB_REPO`, and `BuildConfig.GITHUB_TOKEN` (see Setup). `GITHUB_OWNER` and `GITHUB_REPO` default to the canonical repository values if not set in `local.properties`.
+
 ### HomeScreen offline UX
 
 The home screen surfaces offline state in two additional ways beyond the global banner:
@@ -151,6 +168,7 @@ app/src/main/java/com/clubeve/cc/
 │   └── repository/         # EventRepository, AttendanceRepository
 ├── models/                 # Shared domain models
 ├── sync/                   # AttendanceSyncWorker (WorkManager)
+├── update/                 # UpdateChecker (GitHub Releases API)
 ├── ui/
 │   ├── attendance/         # Attendee list screen + ViewModel
 │   ├── components/         # Reusable Composables
@@ -173,8 +191,30 @@ app/src/main/java/com/clubeve/cc/
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_ANON_KEY=your-anon-key
    ```
+   To override the default GitHub repository used for in-app update checks, add:
+   ```
+   GITHUB_OWNER=your-github-username-or-org
+   GITHUB_REPO=your-repo-name
+   GITHUB_TOKEN=your-personal-access-token
+   ```
+   `GITHUB_OWNER` and `GITHUB_REPO` default to `Nivet2006` / `ClubEve-app` if omitted. `GITHUB_TOKEN` is only required for private repositories — leave it blank or omit it for public repos.
 3. Open in Android Studio and sync Gradle.
 4. Run on a device or emulator with API 26+.
+
+## Release Signing
+
+The release build type uses **conditional signing**: if the `SIGNING_STORE_FILE` environment variable is set, the build signs with the specified keystore (intended for CI). If the variable is absent, Gradle falls back to the default debug signing config for local builds.
+
+Set the following environment variables in your CI environment to enable release signing:
+
+| Variable | Description |
+|---|---|
+| `SIGNING_STORE_FILE` | Absolute path to the `.jks` / `.keystore` file |
+| `SIGNING_STORE_PASSWORD` | Password for the keystore |
+| `SIGNING_KEY_ALIAS` | Alias of the signing key |
+| `SIGNING_KEY_PASSWORD` | Password for the signing key |
+
+These variables are never read from `local.properties` and are not committed to the repository.
 
 ## Common Commands
 

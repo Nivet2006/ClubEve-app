@@ -19,6 +19,8 @@ import com.clubeve.cc.ui.navigation.AppNavGraph
 import com.clubeve.cc.ui.navigation.Screen
 import com.clubeve.cc.ui.theme.White
 import com.clubeve.cc.ui.theme.ClubEveTheme
+import com.clubeve.cc.update.UpdateChecker
+import com.clubeve.cc.update.UpdateDialog
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +37,7 @@ class MainActivity : AppCompatActivity() {
                 Surface(Modifier.fillMaxSize(), color = White) {
                     val navController = rememberNavController()
                     var startDestination by remember { mutableStateOf<String?>(null) }
+                    var pendingRelease by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
 
                     // Determine start destination: check existing session and verify PR role
                     LaunchedEffect(Unit) {
@@ -56,6 +59,11 @@ class MainActivity : AppCompatActivity() {
                                     SessionManager.currentUserId = user.id
                                     SessionManager.currentProfile = profile
                                     startDestination = Screen.Home.route
+
+                                    // Silently check for updates after a successful login.
+                                    // We do this on IO so it never blocks the UI thread.
+                                    val release = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+                                    if (release != null) pendingRelease = release
                                 } else {
                                     // Role mismatch — sign out and go to login
                                     try { client.auth.signOut() } catch (_: Exception) {}
@@ -73,6 +81,14 @@ class MainActivity : AppCompatActivity() {
                         AppNavGraph(
                             navController = navController,
                             startDestination = dest
+                        )
+                    }
+
+                    // Show update dialog once the nav graph is ready and a release was found
+                    pendingRelease?.let { release ->
+                        UpdateDialog(
+                            release = release,
+                            onDismiss = { pendingRelease = null }
                         )
                     }
                 }

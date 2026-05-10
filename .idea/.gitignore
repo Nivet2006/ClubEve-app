@@ -1,3 +1,8 @@
-# Default ignored files
+# Machine-specific / generated — do not commit
 /shelf/
 /workspace.xml
+/caches/
+/deploymentTargetSelector.xml
+/deviceManager.xml
+/planningMode.xml
+*.iml
