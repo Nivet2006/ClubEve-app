@@ -49,5 +49,8 @@ desktop.ini
 # ─── Agent / AI tooling ──────────────────────────────────────────────────────
 .agent/
 
+# ─── Docs ────────────────────────────────────────────────────────────────────
+README.md
+
 # ─── Local asset staging (not part of the app bundle) ────────────────────────
 input_images/
