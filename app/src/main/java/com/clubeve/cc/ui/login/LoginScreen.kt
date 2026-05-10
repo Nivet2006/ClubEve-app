@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -94,8 +95,8 @@ fun LoginScreen(
             SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp)) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.inverseSurface,
-                    contentColor = MaterialTheme.colorScheme.inverseOnSurface
+                    containerColor = Color(0xFF1A1A1A),
+                    contentColor = Color(0xFFF0F0F0)
                 )
             }
         },
