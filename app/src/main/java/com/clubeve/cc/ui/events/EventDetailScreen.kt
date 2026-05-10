@@ -70,7 +70,12 @@ fun EventDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = White, titleContentColor = Black)
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = 80.dp)
+            )
+        },
         containerColor = White
     ) { padding ->
         if (event == null) {

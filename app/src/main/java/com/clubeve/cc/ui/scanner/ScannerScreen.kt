@@ -69,7 +69,12 @@ fun ScannerScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = 80.dp)
+            )
+        },
         containerColor = White
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
