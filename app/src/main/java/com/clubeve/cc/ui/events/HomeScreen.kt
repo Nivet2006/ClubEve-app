@@ -26,6 +26,7 @@ import com.clubeve.cc.models.Event
 import com.clubeve.cc.sync.SyncManager
 import com.clubeve.cc.ui.theme.*
 import com.clubeve.cc.utils.NetworkMonitor
+import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale

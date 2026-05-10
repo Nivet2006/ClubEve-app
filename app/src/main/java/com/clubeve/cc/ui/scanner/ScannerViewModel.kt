@@ -362,7 +362,7 @@ class ScannerViewModel : ViewModel() {
             studentDepartment = student?.department ?: "Unknown",
             studentSemester = student?.semester ?: 0,
             eventTitle = event?.title ?: "Unknown Event",
-            eventLocation = event?.location
+            eventLocation = event?.venue
         )
     }
 
