@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -41,11 +42,12 @@ fun StudentHomeScreen(
     val state by vm.state.collectAsState()
     val pullRefreshState = rememberPullToRefreshState()
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showAttendanceSheet by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val cs = MaterialTheme.colorScheme
     val isGlass = GlassState.isGlass
 
-    // ── Glassmorphism easter egg — same 6-tap trigger as HomeScreen ───────────
+    // ── Glassmorphism easter egg ───────────────────────────────────────────────
     var titleTapCount by remember { mutableStateOf(0) }
     var lastTapTime   by remember { mutableStateOf(0L) }
     var glassToastTrigger by remember { mutableStateOf<Boolean?>(null) }
@@ -57,40 +59,46 @@ fun StudentHomeScreen(
         }
     }
 
-    // Dialog background: translucent frosted in glass mode, normal surface otherwise
     val dialogBg = if (isGlass) Color(0xCC0D0D2B) else cs.surface
-
     val profile = SessionManager.currentProfile
 
     LaunchedEffect(Unit) {
         if (state.registrations.isEmpty() && !state.isLoading) vm.load()
     }
-
     LaunchedEffect(state.error) {
         state.error?.let { snackbarHostState.showSnackbar(it) }
     }
 
+    // ── Attendance bottom sheet ───────────────────────────────────────────────
+    if (showAttendanceSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAttendanceSheet = false },
+            containerColor = dialogBg,
+            tonalElevation = 0.dp,
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+        ) {
+            AttendanceSheetContent(
+                records = state.attendanceRecords,
+                isLoading = state.isAttendanceLoading,
+                cs = cs
+            )
+        }
+    }
+
+    // ── Logout dialog ─────────────────────────────────────────────────────────
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = {
-                Text("Sign Out", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                    color = cs.onBackground)
-            },
-            text = {
-                Text("Are you sure you want to sign out?", fontFamily = Mono,
-                    fontSize = 13.sp, color = cs.onSurface)
-            },
+            title = { Text("Sign Out", fontFamily = Mono, fontWeight = FontWeight.Bold, color = cs.onBackground) },
+            text = { Text("Are you sure you want to sign out?", fontFamily = Mono, fontSize = 13.sp, color = cs.onSurface) },
             confirmButton = {
                 TextButton(onClick = { showLogoutDialog = false; vm.logout(onLogout) }) {
-                    Text("SIGN OUT", fontFamily = Mono, fontWeight = FontWeight.Bold,
-                        color = StatusError, fontSize = 12.sp)
+                    Text("SIGN OUT", fontFamily = Mono, fontWeight = FontWeight.Bold, color = StatusError, fontSize = 12.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("CANCEL", fontFamily = Mono, fontSize = 12.sp,
-                        color = cs.onSurfaceVariant)
+                    Text("CANCEL", fontFamily = Mono, fontSize = 12.sp, color = cs.onSurfaceVariant)
                 }
             },
             containerColor = dialogBg,
@@ -144,8 +152,7 @@ fun StudentHomeScreen(
                         Icon(Icons.Default.Refresh, "Refresh", tint = cs.onSurfaceVariant)
                     }
                     IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, "Logout",
-                            tint = cs.onSurfaceVariant)
+                        Icon(Icons.AutoMirrored.Filled.Logout, "Logout", tint = cs.onSurfaceVariant)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -156,62 +163,268 @@ fun StudentHomeScreen(
         },
         containerColor = cs.background
     ) { padding ->
-        Column(Modifier.padding(padding)) {
-            HorizontalDivider(color = cs.outline, thickness = 1.dp)
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            Column(Modifier.fillMaxSize()) {
+                HorizontalDivider(color = cs.outline, thickness = 1.dp)
 
-            PullToRefreshBox(
-                isRefreshing = state.isLoading,
-                onRefresh = vm::load,
-                state = pullRefreshState,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                when {
-                    state.isLoading && state.registrations.isEmpty() -> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(
-                                color = cs.primary,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
-                    state.registrations.isEmpty() -> {
-                        Column(
-                            Modifier.fillMaxSize().padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text("—", fontSize = 32.sp, color = cs.onSurfaceVariant)
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                "You haven't registered for any events yet.",
-                                fontFamily = Mono,
-                                fontSize = 12.sp,
-                                color = cs.onSurfaceVariant
-                            )
-                        }
-                    }
-                    else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            items(state.registrations, key = { it.id }) { reg ->
-                                val event = state.events[reg.eventId]
-                                StudentEventCard(
-                                    registration = reg,
-                                    event = event,
-                                    onClick = { onEventClick(reg.id) }
-                                )
-                                HorizontalDivider(color = cs.outlineVariant)
+                PullToRefreshBox(
+                    isRefreshing = state.isLoading,
+                    onRefresh = vm::load,
+                    state = pullRefreshState,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    when {
+                        state.isLoading && state.registrations.isEmpty() -> {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = cs.primary, strokeWidth = 2.dp,
+                                    modifier = Modifier.size(28.dp))
                             }
                         }
+                        state.registrations.isEmpty() -> {
+                            Column(
+                                Modifier.fillMaxSize().padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text("—", fontSize = 32.sp, color = cs.onSurfaceVariant)
+                                Spacer(Modifier.height(12.dp))
+                                Text("You haven't registered for any events yet.",
+                                    fontFamily = Mono, fontSize = 12.sp, color = cs.onSurfaceVariant)
+                            }
+                        }
+                        else -> {
+                            LazyColumn(
+                                contentPadding = PaddingValues(
+                                    start = 16.dp, end = 16.dp, top = 16.dp, bottom = 80.dp
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                items(state.registrations, key = { it.id }) { reg ->
+                                    val event = state.events[reg.eventId]
+                                    StudentEventCard(
+                                        registration = reg,
+                                        event = event,
+                                        onClick = { onEventClick(reg.id) }
+                                    )
+                                    HorizontalDivider(color = cs.outlineVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Attendance FAB — bottom-left ──────────────────────────────────
+            Surface(
+                shape = CircleShape,
+                color = cs.surface,
+                shadowElevation = 6.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 20.dp, bottom = 24.dp)
+                    .size(52.dp)
+                    .border(1.dp, cs.outline, CircleShape)
+                    .clickable {
+                        vm.loadAttendance()
+                        showAttendanceSheet = true
+                    }
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = Icons.Default.BarChart,
+                        contentDescription = "My Attendance",
+                        tint = cs.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Attendance bottom sheet content ──────────────────────────────────────────
+
+@Composable
+private fun AttendanceSheetContent(
+    records: List<AttendanceRecord>,
+    isLoading: Boolean,
+    cs: ColorScheme
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 32.dp)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "MY ATTENDANCE",
+                fontFamily = Mono,
+                fontWeight = FontWeight.Black,
+                fontSize = 13.sp,
+                letterSpacing = 2.sp,
+                color = cs.onBackground
+            )
+            // Legend
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                AttendanceLegendPill("PRESENT", StatusSuccess)
+                AttendanceLegendPill("ATTENDED", Color(0xFF1565C0))
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "PRESENT = attended + feedback given  ·  ATTENDED = QR scanned",
+            fontFamily = Mono,
+            fontSize = 9.sp,
+            color = cs.onSurfaceVariant,
+            letterSpacing = 0.5.sp
+        )
+
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(color = cs.outline)
+        Spacer(Modifier.height(8.dp))
+
+        when {
+            isLoading -> {
+                Box(
+                    Modifier.fillMaxWidth().height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = cs.primary, strokeWidth = 2.dp,
+                        modifier = Modifier.size(24.dp))
+                }
+            }
+            records.isEmpty() -> {
+                Box(
+                    Modifier.fillMaxWidth().height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("—", fontSize = 28.sp, color = cs.onSurfaceVariant)
+                        Text("No attendance records yet.",
+                            fontFamily = Mono, fontSize = 12.sp, color = cs.onSurfaceVariant)
+                    }
+                }
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 480.dp),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    items(records, key = { it.eventId }) { record ->
+                        AttendanceRow(record = record, cs = cs)
+                        HorizontalDivider(color = cs.outlineVariant)
                     }
                 }
             }
         }
     }
 }
+
+@Composable
+private fun AttendanceRow(record: AttendanceRecord, cs: ColorScheme) {
+    val dateStr = remember(record.eventDate) {
+        try {
+            ZonedDateTime.parse(record.eventDate)
+                .format(DateTimeFormatter.ofPattern("dd MMM yyyy · HH:mm", Locale.getDefault()))
+        } catch (_: Exception) { record.eventDate }
+    }
+    val checkedInStr = remember(record.checkedInAt) {
+        record.checkedInAt?.let {
+            try {
+                ZonedDateTime.parse(it)
+                    .format(DateTimeFormatter.ofPattern("HH:mm, dd MMM", Locale.getDefault()))
+            } catch (_: Exception) { null }
+        }
+    }
+
+    val (statusColor, statusLabel) = when (record.status) {
+        AttendanceStatus.PRESENT  -> StatusSuccess to "PRESENT"
+        AttendanceStatus.ATTENDED -> Color(0xFF1565C0) to "ATTENDED"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(cs.background)
+            .padding(horizontal = 0.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                record.eventTitle,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = cs.onBackground
+            )
+            if (record.clubName.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    record.clubName.uppercase(),
+                    fontFamily = Mono,
+                    fontSize = 9.sp,
+                    letterSpacing = 1.sp,
+                    color = cs.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Schedule, null,
+                    tint = cs.onSurfaceVariant, modifier = Modifier.size(11.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(dateStr, fontFamily = Mono, fontSize = 10.sp, color = cs.onSurfaceVariant)
+            }
+            checkedInStr?.let {
+                Spacer(Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, null,
+                        tint = statusColor.copy(alpha = 0.7f), modifier = Modifier.size(11.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Checked in at $it", fontFamily = Mono,
+                        fontSize = 10.sp, color = cs.onSurfaceVariant)
+                }
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        // Status badge
+        Box(
+            modifier = Modifier
+                .border(1.dp, statusColor, RoundedCornerShape(4.dp))
+                .background(statusColor.copy(alpha = 0.10f), RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Text(
+                statusLabel,
+                fontFamily = Mono,
+                fontWeight = FontWeight.Bold,
+                fontSize = 9.sp,
+                letterSpacing = 1.sp,
+                color = statusColor
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttendanceLegendPill(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.size(7.dp).background(color, CircleShape))
+        Text(label, fontFamily = Mono, fontSize = 8.sp,
+            letterSpacing = 0.5.sp, color = color, fontWeight = FontWeight.Bold)
+    }
+}
+
+// ── Event card ────────────────────────────────────────────────────────────────
 
 @Composable
 private fun StudentEventCard(
@@ -241,13 +454,8 @@ private fun StudentEventCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = cs.onBackground,
-                modifier = Modifier.weight(1f)
-            )
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                color = cs.onBackground, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             val (pillBg, pillFg, pillLabel) = if (registration.checkedIn) {
                 Triple(cs.primary, cs.onPrimary, "✓ CHECKED IN")
@@ -256,34 +464,21 @@ private fun StudentEventCard(
             }
             Box(
                 modifier = Modifier
-                    .border(
-                        1.dp,
+                    .border(1.dp,
                         if (registration.checkedIn) cs.primary else cs.outline,
-                        RoundedCornerShape(4.dp)
-                    )
+                        RoundedCornerShape(4.dp))
                     .background(pillBg, RoundedCornerShape(4.dp))
                     .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
-                Text(
-                    pillLabel,
-                    fontFamily = Mono,
-                    fontSize = 9.sp,
-                    letterSpacing = 1.sp,
-                    color = pillFg,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(pillLabel, fontFamily = Mono, fontSize = 9.sp,
+                    letterSpacing = 1.sp, color = pillFg, fontWeight = FontWeight.Bold)
             }
         }
 
         if (clubName.isNotBlank()) {
             Spacer(Modifier.height(4.dp))
-            Text(
-                clubName.uppercase(),
-                fontFamily = Mono,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
-                color = cs.onSurfaceVariant
-            )
+            Text(clubName.uppercase(), fontFamily = Mono, fontSize = 10.sp,
+                letterSpacing = 1.sp, color = cs.onSurfaceVariant)
         }
         if (dateStr.isNotBlank()) {
             Spacer(Modifier.height(4.dp))
@@ -300,12 +495,8 @@ private fun StudentEventCard(
                 Icon(Icons.Default.LocationOn, null,
                     tint = cs.onSurfaceVariant, modifier = Modifier.size(12.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(
-                    event!!.location!!,
-                    fontFamily = Mono,
-                    fontSize = 11.sp,
-                    color = cs.onSurfaceVariant
-                )
+                Text(event!!.location!!, fontFamily = Mono,
+                    fontSize = 11.sp, color = cs.onSurfaceVariant)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -313,12 +504,8 @@ private fun StudentEventCard(
             Icon(Icons.Default.QrCode, null,
                 tint = cs.primary, modifier = Modifier.size(11.dp))
             Spacer(Modifier.width(4.dp))
-            Text(
-                "Tap to view your QR code",
-                fontFamily = Mono,
-                fontSize = 10.sp,
-                color = cs.primary
-            )
+            Text("Tap to view your QR code", fontFamily = Mono,
+                fontSize = 10.sp, color = cs.primary)
         }
     }
 }
