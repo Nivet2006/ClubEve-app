@@ -23,7 +23,7 @@ fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier)
     val isDark = ThemeState.isDark
 
     val bgColor  = if (isDark) Color(0xFFF5F5F5) else Color(0xFF111111)
-    val txtColor = if (isDark) Color(0xFF111111) else Color(0xFFF5F5F5)
+    val txtColor = if (isDark) Color(0xFF111111) else Color(0xFFFFFFFF)
 
     SnackbarHost(hostState = hostState, modifier = modifier) { data ->
         Snackbar(
