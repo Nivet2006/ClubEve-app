@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.clubeve.cc.SessionManager
 import com.clubeve.cc.auth.CredentialStore
+import com.clubeve.cc.notifications.AssignmentPollWorker
+import com.clubeve.cc.notifications.SessionStore
 import com.clubeve.cc.data.remote.SupabaseClientProvider
 import com.clubeve.cc.models.Profile
 import io.github.jan.supabase.auth.auth
@@ -134,9 +136,12 @@ class LoginViewModel : ViewModel() {
                     CredentialStore.save(context, usn.uppercase().trim(), password)
                 }
 
-                // Step 6: Store session and navigate
+                // Step 6: Store session, save pr_id for background polling, and navigate
                 SessionManager.currentUserId = userId
                 SessionManager.currentProfile = profile
+                // Persist pr_id so AssignmentPollWorker works even after logout/app close
+                SessionStore.savePrId(context, userId)
+                AssignmentPollWorker.schedule(context)
                 _uiState.update { it.copy(isLoading = false) }
                 onSuccess()
 

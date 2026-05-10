@@ -23,7 +23,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.clubeve.cc.data.remote.SupabaseClientProvider
 import com.clubeve.cc.models.Profile
+import com.clubeve.cc.notifications.AssignmentPollWorker
 import com.clubeve.cc.notifications.AssignmentWatcher
+import com.clubeve.cc.notifications.SessionStore
 import com.clubeve.cc.ui.components.ThemeToggleFab
 import com.clubeve.cc.ui.navigation.AppNavGraph
 import com.clubeve.cc.ui.navigation.Screen
@@ -86,7 +88,10 @@ class MainActivity : AppCompatActivity() {
                                         SessionManager.currentUserId = user.id
                                         SessionManager.currentProfile = profile
                                         startDestination = Screen.Home.route
-                                        // Start watching for new assignments
+                                        // Persist and schedule background polling
+                                        SessionStore.savePrId(applicationContext, user.id)
+                                        AssignmentPollWorker.schedule(applicationContext)
+                                        // Also start realtime watcher while app is open
                                         AssignmentWatcher.start(
                                             context = applicationContext,
                                             prUserId = user.id,
