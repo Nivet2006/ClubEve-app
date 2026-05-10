@@ -23,53 +23,8 @@ private data class EventRow(
 class AssignmentPollWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
 
     override suspend fun doWork(): Result {
-        val prId = SessionStore.getPrId(applicationContext)
-        if (prId.isNullOrBlank()) {
-            Log.d(TAG, "No pr_id — skipping")
-            return Result.success()
-        }
-
-        return try {
-            val client = SupabaseClientProvider.client
-            val seenIds = SessionStore.getSeenAssignmentIds(applicationContext).toMutableSet()
-
-            // Fetch all assignments for this PR
-            val assignments = client.from("pr_event_assignments")
-                .select(columns = Columns.list("id", "event_id")) {
-                    filter { eq("pr_id", prId) }
-                }
-                .decodeList<AssignmentRow>()
-
-            Log.d(TAG, "Found ${assignments.size} assignments, ${seenIds.size} already seen")
-
-            for (assignment in assignments) {
-                if (assignment.id in seenIds) continue
-
-                // Fetch event title
-                val eventTitle = try {
-                    client.from("events")
-                        .select(columns = Columns.list("title")) {
-                            filter { eq("id", assignment.event_id) }
-                        }
-                        .decodeList<EventRow>()
-                        .firstOrNull()?.title ?: "New Event"
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to fetch event: ${e.message}")
-                    "New Event"
-                }
-
-                Log.d(TAG, "Notifying: $eventTitle (id=${assignment.id})")
-                AssignmentNotifier.notify(applicationContext, eventTitle)
-                seenIds.add(assignment.id)
-            }
-
-            SessionStore.saveSeenAssignmentIds(applicationContext, seenIds)
-            Result.success()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Poll error: ${e.message}")
-            Result.retry()
-        }
+        // Notifications disabled — skip all polling
+        return Result.success()
     }
 
     companion object {

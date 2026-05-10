@@ -110,15 +110,8 @@ class MainActivity : AppCompatActivity() {
                                         SessionManager.currentUserId = user.id
                                         SessionManager.currentProfile = profile
                                         startDestination = Screen.Home.route
-                                        // Persist and schedule background polling
+                                        // Persist pr_id for background workers
                                         SessionStore.savePrId(applicationContext, user.id)
-                                        AssignmentPollWorker.schedule(applicationContext)
-                                        // Also start realtime watcher while app is open
-                                        AssignmentWatcher.start(
-                                            context = applicationContext,
-                                            prUserId = user.id,
-                                            scope = lifecycleScope
-                                        )
                                     } else {
                                         try { client.auth.signOut() } catch (_: Exception) {}
                                         SessionManager.clear()

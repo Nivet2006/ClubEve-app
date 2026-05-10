@@ -88,12 +88,6 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         if (vm.state.value.events.isEmpty() && !vm.state.value.isLoading) vm.loadEvents()
-        val userId = com.clubeve.cc.SessionManager.currentUserId
-        if (userId.isNotBlank()) {
-            com.clubeve.cc.notifications.SessionStore.savePrId(context, userId)
-            com.clubeve.cc.notifications.AssignmentPollWorker.schedule(context)
-            AssignmentWatcher.start(context, userId, this)
-        }
     }
 
     LaunchedEffect(syncMessage) {
