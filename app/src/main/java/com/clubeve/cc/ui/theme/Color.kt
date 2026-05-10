@@ -10,6 +10,15 @@ val LightGray     = Color(0xFFE8E8E8)
 val MidGray       = Color(0xFF9E9E9E)
 val DarkGray      = Color(0xFF3A3A3A)
 
+// ── Dark mode palette ─────────────────────────────────────────────────────────
+val DarkBg            = Color(0xFF0F0F0F)
+val DarkSurface       = Color(0xFF1A1A1A)
+val DarkSurfaceRaised = Color(0xFF242424)
+val DarkBorder        = Color(0xFF2E2E2E)
+val DarkBorderSubtle  = Color(0xFF1E1E1E)
+val DarkTextPrimary   = Color(0xFFF0F0F0)
+val DarkTextMuted     = Color(0xFF999999)
+
 // ── Backgrounds ───────────────────────────────────────────────────────────────
 val BackgroundPrimary  = White
 val BackgroundSurface  = OffWhite
@@ -31,11 +40,11 @@ val AccentGlow       = Color(0x14000000)
 val PrimaryContainer = Color(0xFFE8E8E8)
 
 // ── Status ────────────────────────────────────────────────────────────────────
-val StatusSuccess = Color(0xFF1A7A3C)   // dark green — readable on white
-val StatusWarning = Color(0xFF8A5A00)   // dark amber
-val StatusError   = Color(0xFFB00020)   // dark red
+val StatusSuccess = Color(0xFF1A7A3C)
+val StatusWarning = Color(0xFF8A5A00)
+val StatusError   = Color(0xFFB00020)
 
-// ── Legacy aliases (keep old references compiling) ────────────────────────────
+// ── Legacy aliases ────────────────────────────────────────────────────────────
 val AccentPressed   = DarkGray
 val AccentSecondary = StatusSuccess
 val DarkBackground  = Black
