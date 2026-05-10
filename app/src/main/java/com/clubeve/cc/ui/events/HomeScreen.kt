@@ -14,16 +14,18 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clubeve.cc.models.Event
+import com.clubeve.cc.sync.SyncManager
 import com.clubeve.cc.ui.theme.*
+import com.clubeve.cc.utils.NetworkMonitor
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -36,13 +38,29 @@ fun HomeScreen(
     vm: HomeViewModel = viewModel()
 ) {
     val state by vm.state.collectAsState()
+    val pendingCount by vm.pendingSyncCount.collectAsState()
     val pullRefreshState = rememberPullToRefreshState()
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showSyncDialog by remember { mutableStateOf(false) }
+    var syncMessage by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
-    // Load events when screen first appears — session is guaranteed set at this point
+    val isOnline by produceState(initialValue = true) {
+        NetworkMonitor(context).isOnlineFlow.collect { value = it }
+    }
+
     LaunchedEffect(Unit) {
         if (vm.state.value.events.isEmpty() && !vm.state.value.isLoading) {
             vm.loadEvents()
+        }
+    }
+
+    LaunchedEffect(syncMessage) {
+        syncMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            syncMessage = null
         }
     }
 
@@ -70,7 +88,45 @@ fun HomeScreen(
         )
     }
 
+    if (showSyncDialog) {
+        AlertDialog(
+            onDismissRequest = { showSyncDialog = false },
+            title = {
+                Text("Sync Offline Check-ins", fontFamily = Mono, fontWeight = FontWeight.Bold, color = Black)
+            },
+            text = {
+                Text(
+                    "You have $pendingCount offline check-in(s) pending. Sync now?",
+                    fontFamily = Mono, fontSize = 13.sp, color = DarkGray
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSyncDialog = false
+                    coroutineScope.launch {
+                        val report = SyncManager.syncPendingCheckIns(context)
+                        syncMessage = if (report.failed == 0) {
+                            "✓ Synced ${report.synced} check-in(s)"
+                        } else {
+                            "⚠ ${report.failed} failed — try again"
+                        }
+                    }
+                }) {
+                    Text("SYNC NOW", fontFamily = Mono, fontWeight = FontWeight.Bold, color = Black, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSyncDialog = false }) {
+                    Text("CANCEL", fontFamily = Mono, fontSize = 12.sp, color = MidGray)
+                }
+            },
+            containerColor = White,
+            shape = RoundedCornerShape(12.dp)
+        )
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -81,6 +137,27 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    // Sync badge — only shown when there are pending offline check-ins
+                    if (pendingCount > 0) {
+                        BadgedBox(
+                            badge = {
+                                Badge(
+                                    containerColor = Color(0xFFFF3B30),
+                                    contentColor = White
+                                ) {
+                                    Text(
+                                        text = pendingCount.toString(),
+                                        fontFamily = Mono,
+                                        fontSize = 9.sp
+                                    )
+                                }
+                            }
+                        ) {
+                            IconButton(onClick = { showSyncDialog = true }) {
+                                Icon(Icons.Default.CloudUpload, "Sync pending check-ins", tint = DarkGray)
+                            }
+                        }
+                    }
                     IconButton(onClick = vm::loadEvents) {
                         Icon(Icons.Default.Refresh, "Refresh", tint = DarkGray)
                     }
@@ -96,9 +173,30 @@ fun HomeScreen(
         },
         containerColor = White
     ) { padding ->
-        // Thin divider under top bar
         Column(Modifier.padding(padding)) {
             HorizontalDivider(color = BorderDefault, thickness = 1.dp)
+
+            // Offline banner
+            if (!isOnline) {
+                Surface(color = Color(0xFFFF9500)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.WifiOff, contentDescription = null, tint = White,
+                            modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Offline — check-ins will sync when online",
+                            color = White,
+                            fontFamily = Mono,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
 
             PullToRefreshBox(
                 isRefreshing = state.isLoading,

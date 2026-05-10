@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,7 +25,8 @@ fun ConfirmCard(
     result: ScanResult,
     onConfirmCheckIn: (registrationId: String, studentName: String) -> Unit,
     onCancel: () -> Unit,
-    onScanNext: () -> Unit
+    onScanNext: () -> Unit,
+    isOffline: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -46,7 +48,7 @@ fun ConfirmCard(
         when (result) {
             is ScanResult.Success -> {
                 if (result.alreadyCheckedIn) AlreadyCheckedInContent(result, onScanNext)
-                else NewCheckInContent(result, onConfirm = { onConfirmCheckIn(result.registrationId, result.studentName) }, onCancel)
+                else NewCheckInContent(result, onConfirm = { onConfirmCheckIn(result.registrationId, result.studentName) }, onCancel, isOffline)
             }
             is ScanResult.Error -> ErrorContent(result.message, onScanNext)
         }
@@ -93,7 +95,7 @@ private fun AlreadyCheckedInContent(result: ScanResult.Success, onScanNext: () -
 }
 
 @Composable
-private fun NewCheckInContent(result: ScanResult.Success, onConfirm: () -> Unit, onCancel: () -> Unit) {
+private fun NewCheckInContent(result: ScanResult.Success, onConfirm: () -> Unit, onCancel: () -> Unit, isOffline: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(8.dp).background(StatusSuccess, RoundedCornerShape(4.dp)))
         Spacer(Modifier.width(8.dp))
@@ -116,6 +118,28 @@ private fun NewCheckInContent(result: ScanResult.Success, onConfirm: () -> Unit,
     }
 
     Spacer(Modifier.height(20.dp))
+
+    // Offline indicator
+    if (isOffline) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.CloudOff,
+                contentDescription = null,
+                tint = Color(0xFFFF9500),
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "Saved offline — will sync automatically when online",
+                fontFamily = Mono,
+                fontSize = 10.sp,
+                color = Color(0xFFFF9500)
+            )
+        }
+    }
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(

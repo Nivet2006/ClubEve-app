@@ -8,22 +8,32 @@ import kotlinx.serialization.Serializable
 data class RegistrationDto(
     val id: String,
     @SerialName("event_id") val eventId: String,
+    @SerialName("student_id") val studentId: String = "",
     @SerialName("student_name") val studentName: String = "",
     val usn: String = "",
     val email: String = "",
+    @SerialName("qr_token") val qrToken: String? = null,
     @SerialName("is_present") val isPresent: Boolean = false,
-    @SerialName("marked_at") val markedAt: String? = null
+    @SerialName("checked_in") val checkedIn: Boolean = false,
+    @SerialName("marked_at") val markedAt: String? = null,
+    @SerialName("checked_in_at") val checkedInAt: String? = null,
+    @SerialName("registered_at") val registeredAt: String? = null
 ) {
     fun toEntity() = RegistrationEntity(
         id = id,
         eventId = eventId,
+        studentId = studentId,
         studentName = studentName,
         usn = usn.uppercase(),
         email = email,
-        isPresent = isPresent,
-        markedAt = markedAt?.let {
+        qrToken = qrToken,
+        isPresent = isPresent || checkedIn,
+        markedAt = (markedAt ?: checkedInAt)?.let {
             runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull()
         },
-        isSynced = true
+        checkedInAt = checkedInAt ?: markedAt,
+        registeredAt = registeredAt,
+        isSynced = true,
+        pendingSync = false
     )
 }

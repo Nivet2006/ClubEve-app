@@ -6,6 +6,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
@@ -40,6 +42,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.*
 import com.clubeve.cc.ui.components.ConfirmCard
 import com.clubeve.cc.ui.theme.*
+import com.clubeve.cc.utils.ScanFeedback
+import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
@@ -131,14 +135,30 @@ private fun QRScanTab(
     vm: ScannerViewModel,
     cameraPermission: PermissionState
 ) {
+    val context = LocalContext.current
+
+    // Trigger haptic + beep whenever a new flash arrives
+    LaunchedEffect(state.scanFlash) {
+        state.scanFlash?.let { flash ->
+            if (flash.isError || flash.isAlreadyCheckedIn) {
+                ScanFeedback.warning(context)
+            } else {
+                ScanFeedback.success(context)
+            }
+            // Auto-dismiss the flash after 2 seconds
+            delay(2_000)
+            vm.clearFlash()
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (cameraPermission.status.isGranted) {
-            if (state.cameraActive) {
-                CameraPreview(onQrScanned = { vm.onQrScanned(it, eventId) })
-            }
+            // Camera is always active in continuous mode
+            CameraPreview(onQrScanned = { vm.onQrScanned(it, eventId, context) })
             ScannerOverlay()
 
-            if (state.scanResult == null && !state.isProcessing) {
+            // Hint text — only when idle
+            if (state.scanFlash == null) {
                 Text(
                     "Point at student's QR code",
                     fontFamily = Mono,
@@ -149,11 +169,48 @@ private fun QRScanTab(
                 )
             }
 
-            if (state.isProcessing) {
-                Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 200.dp)) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
+            // Batch counter badge — top-right
+            if (state.batchCount > 0) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Black.copy(alpha = 0.65f)
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            "${state.batchCount} checked in",
+                            fontFamily = Mono,
+                            fontSize = 11.sp,
+                            color = Color.White
+                        )
+                    }
                 }
             }
+
+            // Flash result card — slides up, auto-dismisses
+            AnimatedVisibility(
+                visible = state.scanFlash != null,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 }
+            ) {
+                state.scanFlash?.let { flash ->
+                    ScanFlashCard(flash)
+                }
+            }
+
         } else {
             Column(
                 Modifier.fillMaxSize().background(White),
@@ -173,20 +230,92 @@ private fun QRScanTab(
                 }
             }
         }
+    }
+}
 
-        AnimatedVisibility(
-            visible = state.scanResult != null,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically { it },
-            exit = slideOutVertically { it }
-        ) {
-            state.scanResult?.let { result ->
-                ConfirmCard(
-                    result = result,
-                    onConfirmCheckIn = { regId, name -> vm.confirmCheckIn(regId, name) },
-                    onCancel = vm::resetScanner,
-                    onScanNext = vm::resetScanner
-                )
+/**
+ * Non-blocking toast-style card shown briefly after each auto-confirmed scan.
+ * Does not pause the camera or require any user interaction.
+ */
+@Composable
+private fun ScanFlashCard(flash: ScanFlash) {
+    val bgColor: Color
+    val dotColor: Color
+    val label: String
+
+    when {
+        flash.isError -> {
+            bgColor = Color(0xFF1A0000)
+            dotColor = Color(0xFFFF3B30)
+            label = "ERROR"
+        }
+        flash.isAlreadyCheckedIn -> {
+            bgColor = Color(0xFF1A1400)
+            dotColor = Color(0xFFFF9500)
+            label = "ALREADY CHECKED IN"
+        }
+        else -> {
+            bgColor = Color(0xFF001A00)
+            dotColor = Color(0xFF4CAF50)
+            label = "CHECKED IN ✓"
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(bgColor, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .padding(horizontal = 24.dp, vertical = 20.dp)
+    ) {
+        // Drag handle visual
+        Box(
+            modifier = Modifier
+                .width(36.dp)
+                .height(3.dp)
+                .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
+                .align(Alignment.CenterHorizontally)
+        )
+        Spacer(Modifier.height(16.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).background(dotColor, RoundedCornerShape(4.dp)))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                label,
+                fontFamily = Mono,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                letterSpacing = 1.5.sp,
+                color = dotColor
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        if (flash.isError) {
+            Text(flash.errorMessage, fontFamily = Mono, fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f))
+        } else {
+            Text(flash.studentName, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+            Spacer(Modifier.height(2.dp))
+            Text(flash.studentUsn, fontFamily = Mono, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+
+            if (flash.isOffline && !flash.isAlreadyCheckedIn) {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.CloudOff,
+                        contentDescription = null,
+                        tint = Color(0xFFFF9500),
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        "Saved offline — syncs when online",
+                        fontFamily = Mono,
+                        fontSize = 10.sp,
+                        color = Color(0xFFFF9500)
+                    )
+                }
             }
         }
     }
@@ -195,6 +324,7 @@ private fun QRScanTab(
 @Composable
 private fun ManualUsnTab(eventId: String, state: ScannerUiState, vm: ScannerViewModel) {
     val keyboardController = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
 
     Column(
         Modifier.fillMaxSize().background(White).padding(20.dp),
@@ -218,7 +348,7 @@ private fun ManualUsnTab(eventId: String, state: ScannerUiState, vm: ScannerView
             ),
             keyboardActions = KeyboardActions(onSearch = {
                 keyboardController?.hide()
-                vm.findByManualUsn(eventId)
+                vm.findByManualUsn(eventId, context)
             }),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Black,
@@ -234,7 +364,7 @@ private fun ManualUsnTab(eventId: String, state: ScannerUiState, vm: ScannerView
         )
 
         Button(
-            onClick = { keyboardController?.hide(); vm.findByManualUsn(eventId) },
+            onClick = { keyboardController?.hide(); vm.findByManualUsn(eventId, context) },
             enabled = !state.isProcessing && state.manualUsn.isNotBlank(),
             modifier = Modifier.fillMaxWidth().height(48.dp),
             shape = RoundedCornerShape(8.dp),
@@ -255,9 +385,10 @@ private fun ManualUsnTab(eventId: String, state: ScannerUiState, vm: ScannerView
         state.scanResult?.let { result ->
             ConfirmCard(
                 result = result,
-                onConfirmCheckIn = { regId, name -> vm.confirmCheckIn(regId, name) },
+                onConfirmCheckIn = { regId, name -> vm.confirmCheckIn(regId, name, context) },
                 onCancel = vm::resetScanner,
-                onScanNext = vm::resetScanner
+                onScanNext = vm::resetScanner,
+                isOffline = state.isOfflineCheckIn
             )
         }
     }
@@ -283,7 +414,12 @@ fun CameraPreview(onQrScanned: (String) -> Unit) {
                     .also { it.setAnalyzer(executor, QRAnalyzer(onQrScanned)) }
                 try {
                     cameraProvider.unbindAll()
-                    cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, previewUseCase, analysis)
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        previewUseCase,
+                        analysis
+                    )
                 } catch (e: Exception) { e.printStackTrace() }
             }, ContextCompat.getMainExecutor(ctx))
             preview
@@ -329,6 +465,11 @@ fun ScannerOverlay() {
 
         // Scan line
         val lineY = top + rh * scanLineY
-        drawLine(accent.copy(alpha = 0.6f), Offset(left + 4.dp.toPx(), lineY), Offset(left + rw - 4.dp.toPx(), lineY), 1.5.dp.toPx())
+        drawLine(
+            accent.copy(alpha = 0.6f),
+            Offset(left + 4.dp.toPx(), lineY),
+            Offset(left + rw - 4.dp.toPx(), lineY),
+            1.5.dp.toPx()
+        )
     }
 }

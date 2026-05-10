@@ -7,6 +7,11 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 
+/**
+ * Passes every detected QR value straight to [onResult].
+ * Deduplication (cooldown per token) is handled in ScannerViewModel,
+ * so this analyzer stays stateless and always processes frames.
+ */
 class QRAnalyzer(private val onResult: (String) -> Unit) : ImageAnalysis.Analyzer {
 
     private val options = BarcodeScannerOptions.Builder()
@@ -14,16 +19,10 @@ class QRAnalyzer(private val onResult: (String) -> Unit) : ImageAnalysis.Analyze
         .build()
 
     private val scanner = BarcodeScanning.getClient(options)
-    private var isProcessing = false
 
     @androidx.camera.core.ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
-        if (isProcessing) {
-            imageProxy.close()
-            return
-        }
         val mediaImage = imageProxy.image ?: run { imageProxy.close(); return }
-        isProcessing = true
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
         scanner.process(image)
             .addOnSuccessListener { barcodes ->
@@ -31,7 +30,6 @@ class QRAnalyzer(private val onResult: (String) -> Unit) : ImageAnalysis.Analyze
                     ?.rawValue?.let { onResult(it) }
             }
             .addOnCompleteListener {
-                isProcessing = false
                 imageProxy.close()
             }
     }

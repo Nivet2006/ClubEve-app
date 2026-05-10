@@ -1,13 +1,16 @@
 package com.clubeve.cc.ui.attendance
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.clubeve.cc.SessionManager
+import com.clubeve.cc.data.local.AppDatabase
 import com.clubeve.cc.data.remote.SupabaseClientProvider
 import com.clubeve.cc.models.Attendee
 import com.clubeve.cc.models.IdOnly
 import com.clubeve.cc.models.Profile
 import com.clubeve.cc.models.Registration
+import com.clubeve.cc.utils.NetworkMonitor
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
@@ -32,12 +35,16 @@ data class AttendeeListUiState(
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
-    val eventTitle: String = ""
+    val eventTitle: String = "",
+    val isOffline: Boolean = false
 )
 
-class AttendeeListViewModel : ViewModel() {
+class AttendeeListViewModel(application: Application) : AndroidViewModel(application) {
 
     private val client = SupabaseClientProvider.client
+    private val db = AppDatabase.getInstance(application)
+    private val networkMonitor = NetworkMonitor(application)
+
     private val _state = MutableStateFlow(AttendeeListUiState())
     val state: StateFlow<AttendeeListUiState> = _state.asStateFlow()
 
@@ -50,7 +57,6 @@ class AttendeeListViewModel : ViewModel() {
     private val _filteredFlow = MutableStateFlow<List<Attendee>>(emptyList())
 
     init {
-        // Recompute filtered list whenever state changes
         _state.onEach { s ->
             _filteredFlow.value = s.attendees
                 .filter { a ->
@@ -73,7 +79,6 @@ class AttendeeListViewModel : ViewModel() {
         currentEventId = eventId
         _state.update { it.copy(eventTitle = eventTitle) }
         loadAttendees()
-        subscribeRealtime(eventId)
     }
 
     fun setFilter(f: AttendeeFilter) = _state.update { it.copy(filter = f) }
@@ -86,9 +91,16 @@ class AttendeeListViewModel : ViewModel() {
     private fun loadAttendees() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
+
+            val isOnline = networkMonitor.isOnline()
+
+            if (!isOnline) {
+                loadAttendeesFromCache()
+                return@launch
+            }
+
             try {
                 val userId = SessionManager.currentUserId
-                // Validate assignment
                 val assigned = client.from("pr_event_assignments")
                     .select(columns = Columns.list("id")) {
                         filter {
@@ -108,7 +120,6 @@ class AttendeeListViewModel : ViewModel() {
                     return@launch
                 }
 
-                // Fetch registrations
                 val registrations = client.from("registrations")
                     .select(columns = Columns.list("id", "checked_in", "checked_in_at", "registered_at", "student_id")) {
                         filter { eq("event_id", currentEventId) }
@@ -117,11 +128,10 @@ class AttendeeListViewModel : ViewModel() {
                     .decodeList<Registration>()
 
                 if (registrations.isEmpty()) {
-                    _state.update { it.copy(attendees = emptyList(), isLoading = false) }
+                    _state.update { it.copy(attendees = emptyList(), isLoading = false, isOffline = false) }
                     return@launch
                 }
 
-                // Bulk fetch profiles
                 val studentIds = registrations.map { it.studentId }
                 val profiles = client.from("profiles")
                     .select(columns = Columns.list("id", "full_name", "usn", "department", "semester", "year")) {
@@ -146,9 +156,54 @@ class AttendeeListViewModel : ViewModel() {
                     )
                 }
 
-                _state.update { it.copy(attendees = attendees, isLoading = false) }
+                _state.update { it.copy(attendees = attendees, isLoading = false, isOffline = false) }
+                subscribeRealtime(currentEventId)
+
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to load attendees.") }
+                // Network call failed — fall back to cache
+                loadAttendeesFromCache()
+            }
+        }
+    }
+
+    private suspend fun loadAttendeesFromCache() {
+        try {
+            val registrations = db.registrationDao().getByEvent(currentEventId)
+            val profileMap = registrations
+                .filter { it.studentId.isNotBlank() }
+                .mapNotNull { reg -> db.profileDao().getById(reg.studentId)?.let { reg.studentId to it } }
+                .toMap()
+
+            val attendees = registrations.map { reg ->
+                val profile = profileMap[reg.studentId]
+                Attendee(
+                    id = reg.id,
+                    fullName = profile?.fullName ?: reg.studentName.ifBlank { "Unknown" },
+                    usn = profile?.usn ?: reg.usn.ifBlank { "Unknown" },
+                    department = profile?.department ?: "Unknown",
+                    semester = profile?.semester ?: 0,
+                    year = profile?.year ?: 0,
+                    checkedIn = reg.isPresent,
+                    checkedInAt = reg.checkedInAt,
+                    registeredAt = reg.registeredAt
+                )
+            }
+
+            _state.update {
+                it.copy(
+                    attendees = attendees,
+                    isLoading = false,
+                    isOffline = true,
+                    error = null
+                )
+            }
+        } catch (e: Exception) {
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    isOffline = true,
+                    error = "Failed to load cached data."
+                )
             }
         }
     }

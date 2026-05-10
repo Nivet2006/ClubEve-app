@@ -15,6 +15,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,6 +71,28 @@ fun AttendeeListScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             HorizontalDivider(color = BorderDefault)
+
+            // Offline cache banner
+            if (state.isOffline) {
+                Surface(color = Color(0xFFFF9500)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color.White,
+                            modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Showing cached data — may not reflect latest changes",
+                            color = Color.White,
+                            fontFamily = Mono,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
 
             // Stats row
             Row(

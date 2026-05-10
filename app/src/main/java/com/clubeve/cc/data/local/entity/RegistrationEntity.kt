@@ -13,15 +13,21 @@ import androidx.room.PrimaryKey
         childColumns = ["eventId"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index("eventId"), Index("usn")]
+    indices = [Index("eventId"), Index("usn"), Index("qrToken"), Index("studentId")]
 )
 data class RegistrationEntity(
     @PrimaryKey val id: String,
     val eventId: String,
-    val studentName: String,
-    val usn: String,
-    val email: String,
+    val studentId: String = "",
+    val studentName: String = "",
+    val usn: String = "",
+    val email: String = "",
+    val qrToken: String? = null,
     val isPresent: Boolean = false,
     val markedAt: Long? = null,
-    val isSynced: Boolean = true
+    val checkedInAt: String? = null,
+    val registeredAt: String? = null,
+    val isSynced: Boolean = true,
+    // pendingSync = true means a local offline check-in needs to be pushed to Supabase
+    val pendingSync: Boolean = false
 )

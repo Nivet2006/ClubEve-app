@@ -5,18 +5,21 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.clubeve.cc.data.local.dao.EventDao
+import com.clubeve.cc.data.local.dao.ProfileDao
 import com.clubeve.cc.data.local.dao.RegistrationDao
 import com.clubeve.cc.data.local.entity.EventEntity
+import com.clubeve.cc.data.local.entity.ProfileEntity
 import com.clubeve.cc.data.local.entity.RegistrationEntity
 
 @Database(
-    entities = [EventEntity::class, RegistrationEntity::class],
-    version = 1,
+    entities = [EventEntity::class, RegistrationEntity::class, ProfileEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun eventDao(): EventDao
     abstract fun registrationDao(): RegistrationDao
+    abstract fun profileDao(): ProfileDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
