@@ -65,6 +65,9 @@ fun HomeScreen(
     var lastTapTime by remember { mutableStateOf(0L) }
     val isGlass = GlassState.isGlass
 
+    // Dialog background: translucent frosted in glass mode, normal surface otherwise
+    val dialogBg = if (isGlass) Color(0xCC0D0D2B) else cs.surface
+
     LaunchedEffect(isGlass) {
         // Show feedback snackbar whenever glass mode changes (but not on first composition)
     }
@@ -110,7 +113,7 @@ fun HomeScreen(
                     Text("CANCEL", fontFamily = Mono, fontSize = 12.sp, color = cs.onSurfaceVariant)
                 }
             },
-            containerColor = cs.surface, shape = RoundedCornerShape(12.dp)
+            containerColor = dialogBg, tonalElevation = 0.dp, shape = RoundedCornerShape(12.dp)
         )
     }
 
@@ -144,7 +147,7 @@ fun HomeScreen(
                     Text("CANCEL", fontFamily = Mono, fontSize = 12.sp, color = cs.onSurfaceVariant)
                 }
             },
-            containerColor = cs.surface, shape = RoundedCornerShape(12.dp)
+            containerColor = dialogBg, tonalElevation = 0.dp, shape = RoundedCornerShape(12.dp)
         )
     }
 
@@ -195,7 +198,7 @@ fun HomeScreen(
                     Text("GOT IT", fontFamily = Mono, fontWeight = FontWeight.Bold, color = cs.primary, fontSize = 12.sp)
                 }
             },
-            containerColor = cs.surface, shape = RoundedCornerShape(12.dp)
+            containerColor = dialogBg, tonalElevation = 0.dp, shape = RoundedCornerShape(12.dp)
         )
     }
 

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.clubeve.cc.BuildConfig
+import com.clubeve.cc.ui.theme.GlassState
 import com.clubeve.cc.ui.theme.Mono
 import com.clubeve.cc.ui.theme.StatusSuccess
 import kotlinx.coroutines.launch
@@ -31,6 +32,8 @@ fun UpdateDialog(
     val context: Context = LocalContext.current
     val scope = rememberCoroutineScope()
     val cs = MaterialTheme.colorScheme
+    val isGlass = GlassState.isGlass
+    val dialogBg = if (isGlass) Color(0xCC0D0D2B) else cs.surface
 
     var isDownloading by remember { mutableStateOf(false) }
     var downloadPercent by remember { mutableIntStateOf(-1) }
@@ -160,7 +163,8 @@ fun UpdateDialog(
                 }
             }
         },
-        containerColor = cs.surface,
+        containerColor = dialogBg,
+        tonalElevation = 0.dp,
         shape = RoundedCornerShape(16.dp)
     )
 }
