@@ -10,7 +10,6 @@ import com.clubeve.cc.models.Attendee
 import com.clubeve.cc.models.IdOnly
 import com.clubeve.cc.models.Profile
 import com.clubeve.cc.models.Registration
-import com.clubeve.cc.utils.NetworkMonitor
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
@@ -50,7 +49,6 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
 
     private val client = SupabaseClientProvider.client
     private val db = AppDatabase.getInstance(application)
-    private val networkMonitor = NetworkMonitor(application)
 
     private val _state = MutableStateFlow(AttendeeListUiState())
     val state: StateFlow<AttendeeListUiState> = _state.asStateFlow()
@@ -111,13 +109,6 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch {
             if (!silent) _state.update { it.copy(isLoading = true, error = null) }
             _state.update { it.copy(syncStatus = SyncStatus.SYNCING) }
-
-            val isOnline = networkMonitor.isOnline()
-
-            if (!isOnline) {
-                loadAttendeesFromCache()
-                return@launch
-            }
 
             try {
                 val userId = SessionManager.currentUserId
@@ -197,6 +188,7 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
                 subscribeRealtime(currentEventId)
 
             } catch (e: Exception) {
+                // Remote call failed — fall back to local cache and mark as offline
                 loadAttendeesFromCache()
             }
         }
