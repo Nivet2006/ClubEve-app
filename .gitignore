@@ -51,6 +51,7 @@ desktop.ini
 
 # ─── Docs ────────────────────────────────────────────────────────────────────
 PRIVATEREADME.md
+handoff.md
 
 # ─── Local asset staging (not part of the app bundle) ────────────────────────
 input_images/
