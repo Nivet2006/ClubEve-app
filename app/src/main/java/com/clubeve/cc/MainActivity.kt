@@ -112,6 +112,10 @@ class MainActivity : AppCompatActivity() {
                                         startDestination = Screen.Home.route
                                         // Persist pr_id for background workers
                                         SessionStore.savePrId(applicationContext, user.id)
+                                    } else if (profile.role == "student") {
+                                        SessionManager.currentUserId = user.id
+                                        SessionManager.currentProfile = profile
+                                        startDestination = Screen.StudentHome.route
                                     } else {
                                         try { client.auth.signOut() } catch (_: Exception) {}
                                         SessionManager.clear()

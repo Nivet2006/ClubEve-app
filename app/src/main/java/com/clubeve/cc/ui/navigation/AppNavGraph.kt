@@ -34,6 +34,8 @@ import com.clubeve.cc.ui.events.HomeScreen
 import com.clubeve.cc.ui.events.HomeViewModel
 import com.clubeve.cc.ui.login.LoginScreen
 import com.clubeve.cc.ui.scanner.ScannerScreen
+import com.clubeve.cc.ui.student.StudentHomeScreen
+import com.clubeve.cc.ui.student.StudentQrScreen
 import com.clubeve.cc.ui.theme.GlassState
 import com.clubeve.cc.ui.theme.Mono
 import com.clubeve.cc.utils.NetworkMonitor
@@ -144,6 +146,31 @@ fun AppNavGraph(
                 AttendeeListScreen(
                     eventId = eventId,
                     eventTitle = eventTitle,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // ── Student flow ──────────────────────────────────────────────────
+            composable(Screen.StudentHome.route) {
+                StudentHomeScreen(
+                    onEventClick = { registrationId ->
+                        navController.navigate(Screen.StudentQr.createRoute(registrationId))
+                    },
+                    onLogout = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.StudentQr.route,
+                arguments = listOf(navArgument("registrationId") { type = NavType.StringType })
+            ) { backStack ->
+                val registrationId = backStack.arguments?.getString("registrationId")!!
+                StudentQrScreen(
+                    registrationId = registrationId,
                     onBack = { navController.popBackStack() }
                 )
             }

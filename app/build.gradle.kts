@@ -141,6 +141,9 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.appcompat)
 
+    // ZXing — QR code generation for student QR screen
+    implementation(libs.zxing.core)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

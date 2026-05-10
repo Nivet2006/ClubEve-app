@@ -1,0 +1,288 @@
+package com.clubeve.cc.ui.student
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clubeve.cc.SessionManager
+import com.clubeve.cc.models.Event
+import com.clubeve.cc.ui.components.AppSnackbarHost
+import com.clubeve.cc.ui.theme.*
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StudentHomeScreen(
+    onEventClick: (registrationId: String) -> Unit,
+    onLogout: () -> Unit,
+    vm: StudentHomeViewModel = viewModel()
+) {
+    val state by vm.state.collectAsState()
+    val pullRefreshState = rememberPullToRefreshState()
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val cs = MaterialTheme.colorScheme
+
+    val profile = SessionManager.currentProfile
+
+    LaunchedEffect(Unit) {
+        if (state.registrations.isEmpty() && !state.isLoading) vm.load()
+    }
+
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbarHostState.showSnackbar(it) }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = {
+                Text("Sign Out", fontFamily = Mono, fontWeight = FontWeight.Bold,
+                    color = cs.onBackground)
+            },
+            text = {
+                Text("Are you sure you want to sign out?", fontFamily = Mono,
+                    fontSize = 13.sp, color = cs.onSurface)
+            },
+            confirmButton = {
+                TextButton(onClick = { showLogoutDialog = false; vm.logout(onLogout) }) {
+                    Text("SIGN OUT", fontFamily = Mono, fontWeight = FontWeight.Bold,
+                        color = StatusError, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("CANCEL", fontFamily = Mono, fontSize = 12.sp,
+                        color = cs.onSurfaceVariant)
+                }
+            },
+            containerColor = cs.surface,
+            shape = RoundedCornerShape(12.dp)
+        )
+    }
+
+    Scaffold(
+        snackbarHost = {
+            AppSnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
+        },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            "MY EVENTS",
+                            fontFamily = Mono,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 14.sp,
+                            letterSpacing = 2.sp,
+                            color = cs.onBackground
+                        )
+                        if (!profile?.fullName.isNullOrBlank()) {
+                            Text(
+                                profile!!.fullName.uppercase(),
+                                fontFamily = Mono,
+                                fontSize = 9.sp,
+                                color = cs.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = vm::load) {
+                        Icon(Icons.Default.Refresh, "Refresh", tint = cs.onSurfaceVariant)
+                    }
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, "Logout",
+                            tint = cs.onSurfaceVariant)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = cs.background,
+                    titleContentColor = cs.onBackground
+                )
+            )
+        },
+        containerColor = cs.background
+    ) { padding ->
+        Column(Modifier.padding(padding)) {
+            HorizontalDivider(color = cs.outline, thickness = 1.dp)
+
+            PullToRefreshBox(
+                isRefreshing = state.isLoading,
+                onRefresh = vm::load,
+                state = pullRefreshState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when {
+                    state.isLoading && state.registrations.isEmpty() -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                color = cs.primary,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                    state.registrations.isEmpty() -> {
+                        Column(
+                            Modifier.fillMaxSize().padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("—", fontSize = 32.sp, color = cs.onSurfaceVariant)
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "You haven't registered for any events yet.",
+                                fontFamily = Mono,
+                                fontSize = 12.sp,
+                                color = cs.onSurfaceVariant
+                            )
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            items(state.registrations, key = { it.id }) { reg ->
+                                val event = state.events[reg.eventId]
+                                StudentEventCard(
+                                    registration = reg,
+                                    event = event,
+                                    onClick = { onEventClick(reg.id) }
+                                )
+                                HorizontalDivider(color = cs.outlineVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudentEventCard(
+    registration: StudentRegistration,
+    event: Event?,
+    onClick: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    val title = event?.title ?: "Event"
+    val clubName = event?.clubName ?: ""
+    val dateStr = remember(event?.eventDate) {
+        try {
+            ZonedDateTime.parse(event?.eventDate ?: "")
+                .format(DateTimeFormatter.ofPattern("dd MMM yyyy · HH:mm", Locale.getDefault()))
+        } catch (_: Exception) { event?.eventDate ?: "" }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .background(cs.background)
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = cs.onBackground,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            // Check-in status pill
+            val (pillBg, pillFg, pillLabel) = if (registration.checkedIn) {
+                Triple(cs.primary, cs.onPrimary, "✓ CHECKED IN")
+            } else {
+                Triple(cs.background, cs.onBackground, "REGISTERED")
+            }
+            Box(
+                modifier = Modifier
+                    .border(1.dp, if (registration.checkedIn) cs.primary else cs.outline,
+                        RoundedCornerShape(4.dp))
+                    .background(pillBg, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    pillLabel,
+                    fontFamily = Mono,
+                    fontSize = 9.sp,
+                    letterSpacing = 1.sp,
+                    color = pillFg,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        if (clubName.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                clubName.uppercase(),
+                fontFamily = Mono,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                color = cs.onSurfaceVariant
+            )
+        }
+
+        if (dateStr.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Schedule, null,
+                    tint = cs.onSurfaceVariant, modifier = Modifier.size(12.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(dateStr, fontFamily = Mono, fontSize = 11.sp, color = cs.onSurfaceVariant)
+            }
+        }
+
+        if (!event?.location.isNullOrBlank()) {
+            Spacer(Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.LocationOn, null,
+                    tint = cs.onSurfaceVariant, modifier = Modifier.size(12.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(event!!.location!!, fontFamily = Mono,
+                    fontSize = 11.sp, color = cs.onSurfaceVariant)
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.QrCode, null,
+                tint = cs.primary, modifier = Modifier.size(11.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                "Tap to view your QR code",
+                fontFamily = Mono,
+                fontSize = 10.sp,
+                color = cs.primary
+            )
+        }
+    }
+}

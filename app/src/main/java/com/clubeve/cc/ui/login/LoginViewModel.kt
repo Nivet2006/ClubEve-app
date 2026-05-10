@@ -121,12 +121,12 @@ class LoginViewModel : ViewModel() {
                     .select { filter { eq("id", userId) } }
                     .decodeSingle<Profile>()
 
-                if (profile.role != "pr") {
+                if (profile.role != "pr" && profile.role != "student") {
                     client.auth.signOut()
                     SessionManager.clear()
                     _uiState.update {
                         it.copy(isLoading = false,
-                            error = "Access denied. This app is only for PR officers.")
+                            error = "Access denied. Unrecognised account role.")
                     }
                     return@launch
                 }

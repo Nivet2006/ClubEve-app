@@ -12,4 +12,9 @@ sealed class Screen(val route: String) {
     object AttendeeList : Screen("attendee_list/{eventId}") {
         fun createRoute(eventId: String) = "attendee_list/$eventId"
     }
+    // ── Student flow ──────────────────────────────────────────────────────────
+    object StudentHome : Screen("student_home")
+    object StudentQr : Screen("student_qr/{registrationId}") {
+        fun createRoute(registrationId: String) = "student_qr/$registrationId"
+    }
 }
