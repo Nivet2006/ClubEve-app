@@ -140,10 +140,11 @@ private fun QRScanTab(
     // Trigger haptic + beep whenever a new flash arrives
     LaunchedEffect(state.scanFlash) {
         state.scanFlash?.let { flash ->
-            if (flash.isError || flash.isAlreadyCheckedIn) {
-                ScanFeedback.warning(context)
-            } else {
-                ScanFeedback.success(context)
+            when {
+                flash.isError            -> ScanFeedback.error(context)
+                flash.isAlreadyCheckedIn -> ScanFeedback.warning(context)
+                flash.isOffline          -> ScanFeedback.successOffline(context)
+                else                     -> ScanFeedback.success(context)
             }
             // Auto-dismiss the flash after 2 seconds
             delay(2_000)

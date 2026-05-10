@@ -12,11 +12,19 @@ import androidx.core.content.getSystemService
 object ScanFeedback {
 
     /**
-     * Short double-beep + single crisp vibration pulse — new check-in confirmed.
+     * Short double-beep + single crisp vibration pulse — new check-in confirmed online.
      */
     fun success(context: Context) {
         beep(ToneGenerator.TONE_PROP_BEEP2, durationMs = 120)
         vibrate(context, longArrayOf(0, 60, 40, 60), amplitudes = intArrayOf(0, 200, 0, 200))
+    }
+
+    /**
+     * Single soft pulse — check-in saved offline (will sync later).
+     */
+    fun successOffline(context: Context) {
+        beep(ToneGenerator.TONE_PROP_BEEP, durationMs = 80)
+        vibrate(context, longArrayOf(0, 80), amplitudes = intArrayOf(0, 120))
     }
 
     /**
@@ -25,6 +33,14 @@ object ScanFeedback {
     fun warning(context: Context) {
         beep(ToneGenerator.TONE_PROP_NACK, durationMs = 200)
         vibrate(context, longArrayOf(0, 200), amplitudes = intArrayOf(0, 120))
+    }
+
+    /**
+     * Triple short buzz — hard error (access denied, not registered, etc.)
+     */
+    fun error(context: Context) {
+        beep(ToneGenerator.TONE_PROP_NACK, durationMs = 300)
+        vibrate(context, longArrayOf(0, 80, 60, 80, 60, 80), amplitudes = intArrayOf(0, 180, 0, 180, 0, 180))
     }
 
     // ─── Internals ───────────────────────────────────────────────────────────

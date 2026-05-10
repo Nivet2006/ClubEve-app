@@ -34,8 +34,9 @@ data class HomeUiState(
     val events: List<Event> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val fetchingEventId: String? = null,   // non-null while "Fetch Registered List" is running
-    val fetchSuccess: String? = null       // non-null briefly after a successful fetch
+    val fetchingEventId: String? = null,
+    val fetchSuccess: String? = null,
+    val lastSyncedAt: Long = 0L          // epoch ms of last successful remote fetch
 )
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
@@ -121,7 +122,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
 
-                _state.update { it.copy(events = events, isLoading = false) }
+                _state.update { it.copy(events = events, isLoading = false, lastSyncedAt = System.currentTimeMillis()) }
 
                 // Step 4: Cache everything locally for offline use
                 cacheEventsAndRegistrations(events)
