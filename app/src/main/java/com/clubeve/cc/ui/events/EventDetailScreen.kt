@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.clubeve.cc.models.Event
+import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.theme.*
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -66,7 +67,7 @@ fun EventDetailScreen(
             )
         },
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
+            AppSnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
         },
         containerColor = cs.background
     ) { padding ->

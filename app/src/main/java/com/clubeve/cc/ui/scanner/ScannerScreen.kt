@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.*
+import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.components.ConfirmCard
 import com.clubeve.cc.ui.theme.*
 import com.clubeve.cc.utils.ScanFeedback
@@ -70,10 +71,7 @@ fun ScannerScreen(
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = 80.dp)
-            )
+            AppSnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->

@@ -27,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clubeve.cc.models.Event
 import com.clubeve.cc.sync.SyncConflict
 import com.clubeve.cc.sync.SyncManager
+import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.theme.*
 import com.clubeve.cc.utils.NetworkMonitor
 import kotlinx.coroutines.delay
@@ -180,7 +181,7 @@ fun HomeScreen(
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
+            AppSnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
         },
         topBar = {
             TopAppBar(

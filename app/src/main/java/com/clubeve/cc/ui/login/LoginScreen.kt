@@ -22,7 +22,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -36,6 +35,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clubeve.cc.BuildConfig
 import com.clubeve.cc.auth.BiometricHelper
+import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.theme.*
 import com.clubeve.cc.update.UpdateChecker
 import com.clubeve.cc.update.UpdateDialog
@@ -92,13 +92,7 @@ fun LoginScreen(
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp)) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = Color(0xFF1A1A1A),
-                    contentColor = Color(0xFFF0F0F0)
-                )
-            }
+            AppSnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 80.dp))
         },
         containerColor = cs.background
     ) { padding ->
