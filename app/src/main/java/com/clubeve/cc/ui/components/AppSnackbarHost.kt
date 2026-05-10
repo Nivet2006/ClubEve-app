@@ -4,6 +4,9 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.clubeve.cc.ui.theme.ThemeState
@@ -15,13 +18,19 @@ import com.clubeve.cc.ui.theme.ThemeState
  */
 @Composable
 fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
+    // Read ThemeState.isDark directly — it's a Compose State so this composable
+    // will recompose whenever the theme changes
     val isDark = ThemeState.isDark
+
+    val bgColor  = if (isDark) Color(0xFFF5F5F5) else Color(0xFF111111)
+    val txtColor = if (isDark) Color(0xFF111111) else Color(0xFFF5F5F5)
+
     SnackbarHost(hostState = hostState, modifier = modifier) { data ->
         Snackbar(
-            snackbarData = data,
-            containerColor = if (isDark) Color(0xFFF0F0F0) else Color(0xFF1A1A1A),
-            contentColor  = if (isDark) Color(0xFF0F0F0F) else Color(0xFFF0F0F0),
-            actionColor   = if (isDark) Color(0xFF0F0F0F) else Color(0xFFF0F0F0)
+            snackbarData  = data,
+            containerColor = bgColor,
+            contentColor   = txtColor,
+            actionColor    = txtColor
         )
     }
 }
