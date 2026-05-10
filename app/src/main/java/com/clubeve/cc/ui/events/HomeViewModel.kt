@@ -33,7 +33,9 @@ import kotlinx.coroutines.launch
 data class HomeUiState(
     val events: List<Event> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val fetchingEventId: String? = null,   // non-null while "Fetch Registered List" is running
+    val fetchSuccess: String? = null       // non-null briefly after a successful fetch
 )
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
@@ -208,6 +210,87 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             // Caching is best-effort; don't surface errors to the user
         }
     }
+
+    /** Fetches all registrations + QR tokens + profiles for a single event into Room.
+     *  Called from EventDetailScreen's "Fetch Registered List" button.
+     *  Preserves any pending offline check-ins already in the cache. */
+    fun fetchAndCacheForOffline(eventId: String) {
+        viewModelScope.launch {
+            if (!networkMonitor.isOnline()) {
+                _state.update { it.copy(fetchSuccess = "No internet — already using cached data") }
+                return@launch
+            }
+            _state.update { it.copy(fetchingEventId = eventId, fetchSuccess = null) }
+            try {
+                val registrations = client.from("registrations")
+                    .select(
+                        columns = Columns.list(
+                            "id", "event_id", "student_id", "qr_token",
+                            "checked_in", "checked_in_at", "registered_at"
+                        )
+                    ) {
+                        filter { eq("event_id", eventId) }
+                    }
+                    .decodeList<Registration>()
+
+                val existingPending = db.registrationDao().getPendingSync().map { it.id }.toSet()
+                db.registrationDao().upsert(registrations.map { r ->
+                    RegistrationEntity(
+                        id = r.id,
+                        eventId = r.eventId,
+                        studentId = r.studentId,
+                        qrToken = r.qrToken,
+                        isPresent = r.checkedIn,
+                        checkedInAt = r.checkedInAt,
+                        registeredAt = r.registeredAt,
+                        isSynced = true,
+                        pendingSync = r.id in existingPending
+                    )
+                })
+
+                val studentIds = registrations.map { it.studentId }.filter { it.isNotBlank() }
+                if (studentIds.isNotEmpty()) {
+                    val profiles = client.from("profiles")
+                        .select(
+                            columns = Columns.list(
+                                "id", "full_name", "usn", "department", "semester", "year", "role"
+                            )
+                        ) {
+                            filter { isIn("id", studentIds) }
+                        }
+                        .decodeList<Profile>()
+
+                    db.profileDao().upsert(profiles.map { p ->
+                        ProfileEntity(
+                            id = p.id,
+                            fullName = p.fullName,
+                            usn = p.usn,
+                            department = p.department,
+                            semester = p.semester,
+                            year = p.year,
+                            role = p.role
+                        )
+                    })
+                }
+
+                _state.update {
+                    it.copy(
+                        fetchingEventId = null,
+                        fetchSuccess = "✓ ${registrations.size} registrations cached for offline use"
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        fetchingEventId = null,
+                        fetchSuccess = "Fetch failed: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearFetchSuccess() = _state.update { it.copy(fetchSuccess = null) }
 
     fun logout(onLoggedOut: () -> Unit) {
         viewModelScope.launch {

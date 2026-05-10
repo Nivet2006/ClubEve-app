@@ -1,5 +1,11 @@
 package com.clubeve.cc.ui.attendance
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -15,6 +21,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,27 +79,8 @@ fun AttendeeListScreen(
         Column(Modifier.fillMaxSize().padding(padding)) {
             HorizontalDivider(color = BorderDefault)
 
-            // Offline cache banner
-            if (state.isOffline) {
-                Surface(color = Color(0xFFFF9500)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color.White,
-                            modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Showing cached data — may not reflect latest changes",
-                            color = Color.White,
-                            fontFamily = Mono,
-                            fontSize = 11.sp
-                        )
-                    }
-                }
-            }
+            // Sync status bar
+            SyncStatusBadge(syncStatus = state.syncStatus)
 
             // Stats row
             Row(
@@ -137,8 +125,14 @@ fun AttendeeListScreen(
                         selected = selected,
                         onClick = { vm.setFilter(f) },
                         label = {
-                            Text(f.name, fontFamily = Mono, fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp, letterSpacing = 1.sp)
+                            Text(
+                                f.name,
+                                fontFamily = Mono,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                letterSpacing = 1.sp,
+                                color = if (selected) White else DarkGray
+                            )
                         },
                         shape = RoundedCornerShape(4.dp),
                         colors = FilterChipDefaults.filterChipColors(
@@ -263,3 +257,55 @@ fun AttendeeRow(attendee: Attendee) {
 private fun formatTime(iso: String): String = try {
     DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(Instant.parse(iso))
 } catch (_: Exception) { iso }
+
+@Composable
+fun SyncStatusBadge(syncStatus: SyncStatus) {
+    val bgColor = when (syncStatus) {
+        SyncStatus.SYNCED  -> Color(0xFF1A1A1A)
+        SyncStatus.SYNCING -> Color(0xFF1A1A1A)
+        SyncStatus.OFFLINE -> Color(0xFFFF9500)
+    }
+    val icon = when (syncStatus) {
+        SyncStatus.SYNCED  -> Icons.Default.CheckCircle
+        SyncStatus.SYNCING -> Icons.Default.Sync
+        SyncStatus.OFFLINE -> Icons.Default.WifiOff
+    }
+    val label = when (syncStatus) {
+        SyncStatus.SYNCED  -> "Live"
+        SyncStatus.SYNCING -> "Syncing…"
+        SyncStatus.OFFLINE -> "Offline — cached data"
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "sync_spin")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+
+    Surface(color = bgColor) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier
+                    .size(12.dp)
+                    .then(if (syncStatus == SyncStatus.SYNCING) Modifier.rotate(rotation) else Modifier)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(label, fontFamily = Mono, fontSize = 10.sp,
+                letterSpacing = 1.sp, color = Color.White)
+        }
+    }
+}

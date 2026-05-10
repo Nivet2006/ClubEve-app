@@ -19,15 +19,20 @@ import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.RealtimeChannel
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-enum class AttendeeFilter { ALL, PRESENT, ABSENT }
+enum class AttendeeFilter { ALL, PRESENT, ABSENT, REGISTERED }
+
+enum class SyncStatus { SYNCED, SYNCING, OFFLINE }
 
 data class AttendeeListUiState(
     val attendees: List<Attendee> = emptyList(),
@@ -36,7 +41,9 @@ data class AttendeeListUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val eventTitle: String = "",
-    val isOffline: Boolean = false
+    val isOffline: Boolean = false,
+    val syncStatus: SyncStatus = SyncStatus.SYNCING,
+    val lastUpdated: Long = 0L
 )
 
 class AttendeeListViewModel(application: Application) : AndroidViewModel(application) {
@@ -50,6 +57,7 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
 
     private var currentEventId: String = ""
     private var realtimeChannel: RealtimeChannel? = null
+    private var autoRefreshJob: Job? = null
 
     val filteredAttendees: StateFlow<List<Attendee>>
         get() = _filteredFlow
@@ -61,9 +69,10 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
             _filteredFlow.value = s.attendees
                 .filter { a ->
                     when (s.filter) {
-                        AttendeeFilter.ALL -> true
-                        AttendeeFilter.PRESENT -> a.checkedIn
-                        AttendeeFilter.ABSENT -> !a.checkedIn
+                        AttendeeFilter.ALL        -> true
+                        AttendeeFilter.PRESENT    -> a.checkedIn
+                        AttendeeFilter.ABSENT     -> !a.checkedIn
+                        AttendeeFilter.REGISTERED -> true   // all registrants, same as ALL but labelled differently
                     }
                 }
                 .filter { a ->
@@ -79,18 +88,29 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
         currentEventId = eventId
         _state.update { it.copy(eventTitle = eventTitle) }
         loadAttendees()
+        startAutoRefresh()
     }
 
     fun setFilter(f: AttendeeFilter) = _state.update { it.copy(filter = f) }
     fun setSearch(q: String) = _state.update { it.copy(searchQuery = q) }
 
-    fun refresh() {
-        loadAttendees()
+    fun refresh() { loadAttendees() }
+
+    /** Polls every 10 seconds regardless of online/offline state. */
+    private fun startAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = viewModelScope.launch {
+            while (isActive) {
+                delay(10_000)
+                loadAttendees(silent = true)
+            }
+        }
     }
 
-    private fun loadAttendees() {
+    private fun loadAttendees(silent: Boolean = false) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            if (!silent) _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(syncStatus = SyncStatus.SYNCING) }
 
             val isOnline = networkMonitor.isOnline()
 
@@ -114,6 +134,7 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
                     _state.update {
                         it.copy(
                             isLoading = false,
+                            syncStatus = SyncStatus.SYNCED,
                             error = "Access denied: you are not assigned to this event."
                         )
                     }
@@ -128,7 +149,15 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
                     .decodeList<Registration>()
 
                 if (registrations.isEmpty()) {
-                    _state.update { it.copy(attendees = emptyList(), isLoading = false, isOffline = false) }
+                    _state.update {
+                        it.copy(
+                            attendees = emptyList(),
+                            isLoading = false,
+                            isOffline = false,
+                            syncStatus = SyncStatus.SYNCED,
+                            lastUpdated = System.currentTimeMillis()
+                        )
+                    }
                     return@launch
                 }
 
@@ -156,11 +185,18 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
                     )
                 }
 
-                _state.update { it.copy(attendees = attendees, isLoading = false, isOffline = false) }
+                _state.update {
+                    it.copy(
+                        attendees = attendees,
+                        isLoading = false,
+                        isOffline = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        lastUpdated = System.currentTimeMillis()
+                    )
+                }
                 subscribeRealtime(currentEventId)
 
             } catch (e: Exception) {
-                // Network call failed — fall back to cache
                 loadAttendeesFromCache()
             }
         }
@@ -194,7 +230,9 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
                     attendees = attendees,
                     isLoading = false,
                     isOffline = true,
-                    error = null
+                    syncStatus = SyncStatus.OFFLINE,
+                    error = null,
+                    lastUpdated = System.currentTimeMillis()
                 )
             }
         } catch (e: Exception) {
@@ -202,6 +240,7 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
                 it.copy(
                     isLoading = false,
                     isOffline = true,
+                    syncStatus = SyncStatus.OFFLINE,
                     error = "Failed to load cached data."
                 )
             }
@@ -223,8 +262,8 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
 
                 changes.collect { action ->
                     when (action) {
-                        is PostgresAction.Update -> loadAttendees()
-                        is PostgresAction.Insert -> loadAttendees()
+                        is PostgresAction.Update -> loadAttendees(silent = true)
+                        is PostgresAction.Insert -> loadAttendees(silent = true)
                         else -> {}
                     }
                 }
@@ -236,6 +275,7 @@ class AttendeeListViewModel(application: Application) : AndroidViewModel(applica
 
     override fun onCleared() {
         super.onCleared()
+        autoRefreshJob?.cancel()
         viewModelScope.launch {
             try { realtimeChannel?.unsubscribe() } catch (_: Exception) {}
         }

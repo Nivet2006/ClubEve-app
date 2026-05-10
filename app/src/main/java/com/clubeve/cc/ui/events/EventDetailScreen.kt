@@ -37,6 +37,16 @@ fun EventDetailScreen(
 ) {
     val state by vm.state.collectAsState()
     val event = remember(state.events, eventId) { state.events.find { it.id == eventId } }
+    val isFetching = state.fetchingEventId == eventId
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show snackbar when fetch completes
+    LaunchedEffect(state.fetchSuccess) {
+        state.fetchSuccess?.let {
+            snackbarHostState.showSnackbar(it)
+            vm.clearFetchSuccess()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -60,6 +70,7 @@ fun EventDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = White, titleContentColor = Black)
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = White
     ) { padding ->
         if (event == null) {
@@ -177,7 +188,7 @@ fun EventDetailScreen(
 
                 HorizontalDivider(color = BorderSubtle)
 
-                // Action buttons
+                // Action buttons — row 1: Scan QR + Attendees
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -207,6 +218,34 @@ fun EventDetailScreen(
                         Icon(Icons.Default.People, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("ATTENDEES", fontFamily = Mono, fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp, letterSpacing = 1.sp)
+                    }
+                }
+
+                // Action buttons — row 2: Fetch for offline
+                OutlinedButton(
+                    onClick = { vm.fetchAndCacheForOffline(eventId) },
+                    enabled = !isFetching,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp, if (isFetching) BorderDefault else Black
+                    ),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Black)
+                ) {
+                    if (isFetching) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            color = Black,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("FETCHING…", fontFamily = Mono, fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp, letterSpacing = 1.sp, color = MidGray)
+                    } else {
+                        Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("FETCH REGISTERED LIST", fontFamily = Mono, fontWeight = FontWeight.Bold,
                             fontSize = 11.sp, letterSpacing = 1.sp)
                     }
                 }
