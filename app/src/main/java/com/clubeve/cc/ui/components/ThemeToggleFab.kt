@@ -43,8 +43,10 @@ import com.clubeve.cc.ui.theme.DarkTextPrimary
 import com.clubeve.cc.ui.theme.Mono
 import com.clubeve.cc.ui.theme.ThemeState
 import com.clubeve.cc.ui.theme.White
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.hypot
 import kotlin.math.max
 
@@ -146,8 +148,10 @@ fun ThemeToggleFab() {
                                 animationSpec = tween(DURATION, easing = FastOutSlowInEasing)
                             )
 
-                            // Flip theme at peak — fully covered
-                            ThemeState.isDark = next
+                            // Flip theme at peak — on main thread so recomposition triggers
+                            withContext(Dispatchers.Main) {
+                                ThemeState.isDark = next
+                            }
 
                             // Collapse — fade label out at start
                             launch {

@@ -4,9 +4,10 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,7 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,37 +36,42 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         setContent {
+            // ClubEveTheme reads ThemeState.isDark directly — recomposes on every toggle
             ClubEveTheme {
-                val bgColor = androidx.compose.material3.MaterialTheme.colorScheme.background
-                Surface(Modifier.fillMaxSize(), color = bgColor) {
-                    Box(Modifier.fillMaxSize()) {
-                        val navController = rememberNavController()
-                        var startDestination by remember { mutableStateOf<String?>(null) }
-                        var pendingRelease by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
+                // Read background INSIDE ClubEveTheme so it recomposes with the theme
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
+                    val navController = rememberNavController()
+                    var startDestination by remember { mutableStateOf<String?>(null) }
+                    var pendingRelease by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
 
-                        // ── 1. Check for update immediately on every launch ──
-                        LaunchedEffect(Unit) {
-                            CoroutineScope(Dispatchers.IO).launch {
-                                val release = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
-                                if (release != null) pendingRelease = release
+                    // Check for update on every launch
+                    LaunchedEffect(Unit) {
+                        withContext(Dispatchers.IO) {
+                            val release = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+                            if (release != null) withContext(Dispatchers.Main) {
+                                pendingRelease = release
                             }
                         }
+                    }
 
-                        // ── 2. Determine start destination ───────────────────
-                        LaunchedEffect(Unit) {
-                            val client = SupabaseClientProvider.client
-                            val user = client.auth.currentUserOrNull()
-                            if (user == null) {
-                                startDestination = Screen.Login.route
-                                return@LaunchedEffect
-                            }
-
-                            CoroutineScope(Dispatchers.IO).launch {
-                                try {
-                                    val profile = client.from("profiles")
-                                        .select { filter { eq("id", user.id) } }
-                                        .decodeSingle<Profile>()
-
+                    // Determine start destination
+                    LaunchedEffect(Unit) {
+                        val client = SupabaseClientProvider.client
+                        val user = client.auth.currentUserOrNull()
+                        if (user == null) {
+                            startDestination = Screen.Login.route
+                            return@LaunchedEffect
+                        }
+                        withContext(Dispatchers.IO) {
+                            try {
+                                val profile = client.from("profiles")
+                                    .select { filter { eq("id", user.id) } }
+                                    .decodeSingle<Profile>()
+                                withContext(Dispatchers.Main) {
                                     if (profile.role == "pr") {
                                         SessionManager.currentUserId = user.id
                                         SessionManager.currentProfile = profile
@@ -74,30 +81,25 @@ class MainActivity : AppCompatActivity() {
                                         SessionManager.clear()
                                         startDestination = Screen.Login.route
                                     }
-                                } catch (_: Exception) {
+                                }
+                            } catch (_: Exception) {
+                                withContext(Dispatchers.Main) {
                                     startDestination = Screen.Login.route
                                 }
                             }
                         }
-
-                        startDestination?.let { dest ->
-                            AppNavGraph(
-                                navController = navController,
-                                startDestination = dest
-                            )
-                        }
-
-                        // ── Update dialog — shown as soon as release is found ─
-                        pendingRelease?.let { release ->
-                            UpdateDialog(
-                                release = release,
-                                onDismiss = { pendingRelease = null }
-                            )
-                        }
-
-                        // Floating theme toggle — always on top
-                        ThemeToggleFab()
                     }
+
+                    startDestination?.let { dest ->
+                        AppNavGraph(navController = navController, startDestination = dest)
+                    }
+
+                    pendingRelease?.let { release ->
+                        UpdateDialog(release = release, onDismiss = { pendingRelease = null })
+                    }
+
+                    // Always on top — reads ThemeState.isDark directly
+                    ThemeToggleFab()
                 }
             }
         }

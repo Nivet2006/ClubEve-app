@@ -32,8 +32,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clubeve.cc.BuildConfig
 import com.clubeve.cc.auth.BiometricHelper
 import com.clubeve.cc.ui.theme.*
+import com.clubeve.cc.update.UpdateChecker
+import com.clubeve.cc.update.UpdateDialog
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -44,6 +48,11 @@ fun LoginScreen(
     val context = LocalContext.current
     val activity = context as FragmentActivity
     val cs = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var pendingRelease by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
+    var noUpdateMsg by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.checkSavedCredentials(context) }
 
@@ -63,6 +72,11 @@ fun LoginScreen(
                 )
             }
         }
+    }
+
+    // Show update dialog if a release was found
+    pendingRelease?.let { release ->
+        UpdateDialog(release = release, onDismiss = { pendingRelease = null })
     }
 
     Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
