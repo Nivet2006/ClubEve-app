@@ -43,7 +43,9 @@ import com.clubeve.cc.utils.NetworkMonitor
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    startDestination: String = Screen.Login.route
+    startDestination: String = Screen.Login.route,
+    showStudentAttendance: Boolean = false,
+    onStudentAttendanceDismiss: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isOnline by produceState(initialValue = true) {
@@ -165,7 +167,9 @@ fun AppNavGraph(
                         navController.navigate(Screen.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
+                    },
+                    showAttendanceSheet = showStudentAttendance,
+                    onAttendanceDismiss = onStudentAttendanceDismiss
                 )
             }
 

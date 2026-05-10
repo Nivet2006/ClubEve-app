@@ -1,7 +1,7 @@
 {
   "enabled": true,
   "name": "Sync Docs on Source Change",
-  "description": "Watches Kotlin source files, build configs, and manifest for changes, then prompts the agent to update the README or any docs in a /docs folder to reflect the changes.",
+  "description": "Watches Kotlin source files, build configs, and manifest for changes, then prompts the agent to update the README AND handoff.md or any docs in a /docs folder to reflect the changes.",
   "version": "1",
   "when": {
     "type": "fileEdited",

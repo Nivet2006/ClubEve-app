@@ -9,16 +9,27 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
@@ -31,7 +42,11 @@ import com.clubeve.cc.ui.components.ThemeToggleFab
 import com.clubeve.cc.ui.navigation.AppNavGraph
 import com.clubeve.cc.ui.navigation.Screen
 import com.clubeve.cc.ui.theme.ClubEveTheme
+import com.clubeve.cc.ui.theme.DarkBorder
+import com.clubeve.cc.ui.theme.DarkSurface
 import com.clubeve.cc.ui.theme.GlassState
+import com.clubeve.cc.ui.theme.ThemeState
+import com.clubeve.cc.ui.theme.White
 import com.clubeve.cc.update.UpdateChecker
 import com.clubeve.cc.update.UpdateDialog
 import io.github.jan.supabase.auth.auth
@@ -81,6 +96,9 @@ class MainActivity : AppCompatActivity() {
                     val navController = rememberNavController()
                     var startDestination by remember { mutableStateOf<String?>(null) }
                     var pendingRelease by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
+                    // Attendance sheet state — owned here so FAB is in the same Box as ThemeToggleFab
+                    var showStudentAttendance by remember { mutableStateOf(false) }
+                    val isStudentHome = startDestination == Screen.StudentHome.route
 
                     // Check for update on every launch
                     LaunchedEffect(Unit) {
@@ -131,12 +149,53 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     startDestination?.let { dest ->
-                        AppNavGraph(navController = navController, startDestination = dest)
+                        AppNavGraph(
+                            navController = navController,
+                            startDestination = dest,
+                            showStudentAttendance = showStudentAttendance,
+                            onStudentAttendanceDismiss = { showStudentAttendance = false }
+                        )
                     }
 
                     // Hide the theme toggle FAB when glassmorphism is active
                     if (!isGlass) {
                         ThemeToggleFab()
+                    }
+
+                    // Attendance FAB — bottom-left, symmetric with ThemeToggleFab (bottom-right)
+                    // Only shown on the student home screen, hidden in glass mode
+                    if (isStudentHome && !isGlass) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 20.dp, bottom = 24.dp),
+                            contentAlignment = Alignment.BottomStart
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (ThemeState.isDark) DarkSurface else White,
+                                shadowElevation = 8.dp,
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .border(
+                                        1.dp,
+                                        if (ThemeState.isDark) DarkBorder
+                                        else androidx.compose.ui.graphics.Color(0x1F000000),
+                                        CircleShape
+                                    )
+                                    .clickable { showStudentAttendance = true }
+                            ) {
+                                Box(contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()) {
+                                    Icon(
+                                        imageVector = Icons.Default.BarChart,
+                                        contentDescription = "My Attendance",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     pendingRelease?.let { release ->

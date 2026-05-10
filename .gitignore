@@ -48,10 +48,27 @@ desktop.ini
 
 # ─── Agent / AI tooling ──────────────────────────────────────────────────────
 .agent/
+.kiro/
+.cursor/
+.copilot/
+.github/copilot-instructions.md
+.aider*
+.continue/
+.codeium/
+.tabnine/
+.sourcegraph/
+.cody/
+.windsurf/
+.amazonq/
+.aws/sso/
+.claude/
 
 # ─── Docs ────────────────────────────────────────────────────────────────────
 PRIVATEREADME.md
 handoff.md
+
+# ─── ProGuard ─────────────────────────────────────────────────────────────────
+proguard-rules.pro
 
 # ─── Local asset staging (not part of the app bundle) ────────────────────────
 input_images/
