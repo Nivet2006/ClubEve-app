@@ -103,7 +103,9 @@ class MainActivity : AppCompatActivity() {
                     // Attendance sheet state — owned here so FAB is in the same Box as ThemeToggleFab
                     var showStudentAttendance by remember { mutableStateOf(false) }
                     val currentBackStack by navController.currentBackStackEntryAsState()
-                    val isStudentHome = currentBackStack?.destination?.route == Screen.StudentHome.route
+                    val currentRoute = currentBackStack?.destination?.route
+                    val isStudentHome = currentRoute == Screen.StudentHome.route
+                    val isLoginScreen = currentRoute == Screen.Login.route
 
                     // Check for update on every launch
                     LaunchedEffect(Unit) {
@@ -172,7 +174,10 @@ class MainActivity : AppCompatActivity() {
                     // Theme toggle FAB (bottom-right).
                     // In normal mode: dark/light toggle with wipe animation.
                     // In glass mode: palette button to customize accent color.
-                    ThemeToggleFab()
+                    // Hidden on the login screen in both modes.
+                    if (!isLoginScreen) {
+                        ThemeToggleFab()
+                    }
 
                     // Attendance FAB — bottom-left, symmetric with ThemeToggleFab (bottom-right)
                     // Shown on the student home screen in all modes (normal + glass)
