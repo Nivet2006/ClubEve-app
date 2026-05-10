@@ -1,4 +1,4 @@
-# ClubEve CC
+# ClubEve App [![Build & Release](https://github.com/Nivet2006/ClubEve-app/actions/workflows/release.yml/badge.svg)](https://github.com/Nivet2006/ClubEve-app/actions/workflows/release.yml)
 
 An Android app for managing event attendance at college events. PR officers scan student QR codes or look up students manually to mark attendance. Students can view their registered events, QR codes, and attendance history.
 
@@ -82,11 +82,6 @@ Two roles, one app:
 - **Glass accent color picker** — in glassmorphism mode, the bottom-right FAB switches from the dark/light toggle to a palette icon. Tapping it opens a `GlassColorPickerDialog` with a full HSV color wheel (hue ring, saturation/value square, brightness slider, live preview swatch), all styled to match the glass palette. The chosen color is persisted via `GlassColorStore` and restored on next launch.
 - The bottom-right theme FAB and the bottom-left attendance FAB (student flow) are both visible in all modes — normal, dark, and glassmorphism. In glass mode the attendance FAB uses `GlassSurface` background, `GlassBorderColor` border, and the current glass accent color for its icon tint.
 
----
-
-## How It Works
-
-The app talks to a Supabase backend (PostgreSQL + Auth). Events, registrations, and student profiles are cached locally in a Room database so the app stays functional without internet. Background sync is handled by WorkManager.
 
 ---
 
@@ -111,28 +106,3 @@ The app talks to a Supabase backend (PostgreSQL + Auth). Events, registrations, 
 | Camera | CameraX 1.4.1 + ML Kit Barcode 17.3.0 |
 | Security | security-crypto 1.1.0-alpha06 + biometric 1.1.0 |
 | Storage | DataStore Preferences 1.1.1 |
-
----
-
-## Setup
-
-1. Clone the repo
-2. Create `local.properties` (git-ignored):
-   ```
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your-anon-key
-   GITHUB_OWNER=your-github-username
-   GITHUB_REPO=your-repo-name
-   GITHUB_TOKEN=           # optional, only for private repos
-   ```
-3. Open in Android Studio, sync Gradle
-4. Run on a device or emulator with API 26+
-
----
-
-## CI/CD
-
-Pushing to `master` triggers a GitHub Actions workflow that:
-- Computes the version as `1.0.<commit-count>`
-- Builds a signed release APK using secrets stored in the repository
-- Creates a git tag and publishes a GitHub Release with the APK attached
