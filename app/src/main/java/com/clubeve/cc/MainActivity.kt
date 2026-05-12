@@ -113,6 +113,9 @@ class MainActivity : AppCompatActivity() {
                     val isStudentHome = currentRoute == Screen.StudentHome.route
                     val isLoginScreen = currentRoute == Screen.Login.route
 
+                    // Splash — shown until splashDone = true
+                    var splashDone by remember { mutableStateOf(false) }
+
                     // Check for update on every launch
                     LaunchedEffect(Unit) {
                         withContext(Dispatchers.IO) {
@@ -243,6 +246,13 @@ class MainActivity : AppCompatActivity() {
 
                     pendingRelease?.let { release ->
                         UpdateDialog(release = release, onDismiss = { pendingRelease = null })
+                    }
+
+                    // Splash overlay — sits on top of everything, fades away on its own
+                    if (!splashDone) {
+                        com.clubeve.cc.ui.components.SplashScreen(
+                            onDone = { splashDone = true }
+                        )
                     }
                 }
             }
