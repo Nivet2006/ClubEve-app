@@ -31,6 +31,7 @@ import androidx.navigation.navArgument
 import com.clubeve.cc.ui.attendance.AttendeeListScreen
 import com.clubeve.cc.ui.cc.CcDashboardScreen
 import com.clubeve.cc.ui.cc.CcEventDetailScreen
+import com.clubeve.cc.ui.cc.CcFeedbackEditorScreen
 import com.clubeve.cc.ui.cc.CcLiveScreen
 import com.clubeve.cc.ui.cc.CcReportScreen
 import com.clubeve.cc.ui.events.EventDetailScreen
@@ -212,6 +213,9 @@ fun AppNavGraph(
                     onBack = { navController.popBackStack() },
                     onLiveView = { id ->
                         navController.navigate(Screen.CcLiveView.createRoute(id))
+                    },
+                    onFeedbackEditor = { id ->
+                        navController.navigate(Screen.CcFeedbackEditor.createRoute(id))
                     }
                 )
             }
@@ -233,6 +237,17 @@ fun AppNavGraph(
             ) { backStack ->
                 val eventId = backStack.arguments?.getString("eventId")!!
                 CcLiveScreen(
+                    eventId = eventId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.CcFeedbackEditor.route,
+                arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+            ) { backStack ->
+                val eventId = backStack.arguments?.getString("eventId")!!
+                CcFeedbackEditorScreen(
                     eventId = eventId,
                     onBack = { navController.popBackStack() }
                 )

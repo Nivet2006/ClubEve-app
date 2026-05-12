@@ -144,6 +144,9 @@ dependencies {
     // ZXing — QR code generation for student QR screen
     implementation(libs.zxing.core)
 
+    // Drag-and-drop reordering for LazyColumn (feedback form builder)
+    implementation(libs.reorderable)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -35,6 +35,7 @@ fun CcEventDetailScreen(
     eventId: String,
     onBack: () -> Unit,
     onLiveView: (eventId: String) -> Unit,
+    onFeedbackEditor: (eventId: String) -> Unit,
     vm: CcEventDetailViewModel = viewModel()
 ) {
     val state by vm.state.collectAsState()
@@ -127,6 +128,27 @@ fun CcEventDetailScreen(
                             )
                             HorizontalDivider(color = cs.outlineVariant)
                         }
+
+                        // ── Feedback questions editor (draft, rejected, approved) ──
+                        OutlinedButton(
+                            onClick = { onFeedbackEditor(event.id) },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, cs.outline),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onBackground)
+                        ) {
+                            Icon(Icons.Default.Quiz, null,
+                                modifier = Modifier.size(16.dp), tint = cs.onBackground)
+                            Spacer(Modifier.width(8.dp))
+                            val qCount = event.feedbackConfig?.size ?: 0
+                            Text(
+                                "FEEDBACK QUESTIONS ($qCount)",
+                                fontFamily = Mono, fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp, letterSpacing = 1.sp, color = cs.onBackground
+                            )
+                        }
+
+                        HorizontalDivider(color = cs.outlineVariant)
 
                         // ── Submit for review (draft only) ────────────────────
                         if (event.approvalStatus == ApprovalStatus.DRAFT ||

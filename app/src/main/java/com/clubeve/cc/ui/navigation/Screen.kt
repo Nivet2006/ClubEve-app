@@ -28,4 +28,7 @@ sealed class Screen(val route: String) {
     object CcLiveView : Screen("cc_live_view/{eventId}") {
         fun createRoute(eventId: String) = "cc_live_view/$eventId"
     }
+    object CcFeedbackEditor : Screen("cc_feedback_editor/{eventId}") {
+        fun createRoute(eventId: String) = "cc_feedback_editor/$eventId"
+    }
 }

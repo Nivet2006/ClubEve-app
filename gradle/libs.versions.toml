@@ -28,6 +28,7 @@ biometric = "1.1.0"
 securityCrypto = "1.1.0-alpha06"
 zxing = "3.5.3"
 appcompat = "1.7.0"
+reorderable = "2.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -77,6 +78,7 @@ androidx-biometric = { group = "androidx.biometric", name = "biometric", version
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
