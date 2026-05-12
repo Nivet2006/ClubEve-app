@@ -113,6 +113,15 @@ Three roles, one app:
 
 ---
 
+### Splash Screen
+
+- Animated full-screen splash plays once on every app launch (~1.7 s total)
+- Timeline: text fades in on a white background → background cross-fades to dark (or the glass radial gradient) while the text color transitions from black to white → entire splash fades out
+- In glassmorphism mode the dark target is the deep purple-blue radial gradient used throughout the app; in normal mode it fades to solid black
+- Implemented as a stateless `SplashScreen` composable in `ui/components/SplashScreen.kt`; accepts a single `onDone` callback invoked when the animation completes
+
+---
+
 ### Theme
 
 - Full light and dark mode with a smooth circular wipe animation (bottom-right FAB)
