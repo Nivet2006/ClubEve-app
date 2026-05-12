@@ -29,6 +29,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.clubeve.cc.ui.attendance.AttendeeListScreen
+import com.clubeve.cc.ui.cc.CcDashboardScreen
+import com.clubeve.cc.ui.cc.CcEventDetailScreen
+import com.clubeve.cc.ui.cc.CcReportScreen
 import com.clubeve.cc.ui.events.EventDetailScreen
 import com.clubeve.cc.ui.events.HomeScreen
 import com.clubeve.cc.ui.events.HomeViewModel
@@ -92,10 +95,10 @@ fun AppNavGraph(
             composable(Screen.Login.route) {
                 LoginScreen(
                     onLoginSuccess = { role ->
-                        val destination = if (role == "student") {
-                            Screen.StudentHome.route
-                        } else {
-                            Screen.Home.route  // pr and any other staff role
+                        val destination = when (role) {
+                            "student" -> Screen.StudentHome.route
+                            "cc"      -> Screen.CcDashboard.route
+                            else      -> Screen.Home.route  // pr and any other staff role
                         }
                         navController.navigate(destination) {
                             popUpTo(Screen.Login.route) { inclusive = true }
@@ -180,6 +183,45 @@ fun AppNavGraph(
                 val registrationId = backStack.arguments?.getString("registrationId")!!
                 StudentQrScreen(
                     registrationId = registrationId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // ── CC (Club Coordinator) flow ─────────────────────────────────────
+            composable(Screen.CcDashboard.route) {
+                CcDashboardScreen(
+                    onEventClick = { eventId ->
+                        navController.navigate(Screen.CcEventDetail.createRoute(eventId))
+                    },
+                    onLogout = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.CcEventDetail.route,
+                arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+            ) { backStack ->
+                val eventId = backStack.arguments?.getString("eventId")!!
+                CcEventDetailScreen(
+                    eventId = eventId,
+                    onBack = { navController.popBackStack() },
+                    onOpenReport = { id ->
+                        navController.navigate(Screen.CcReport.createRoute(id))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.CcReport.route,
+                arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+            ) { backStack ->
+                val eventId = backStack.arguments?.getString("eventId")!!
+                CcReportScreen(
+                    eventId = eventId,
                     onBack = { navController.popBackStack() }
                 )
             }
