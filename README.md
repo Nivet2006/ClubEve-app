@@ -139,19 +139,3 @@ Three roles, one app:
 - Camera permission for QR scanning
 - Internet for initial login and sync (offline check-in works without it)
 
----
-
-## Tech Stack
-
-| Category | Library |
-|---|---|
-| Language | Kotlin 100% |
-| UI | Jetpack Compose + Material 3 |
-| Navigation | Navigation Compose 2.8.4 |
-| Local DB | Room 2.6.1 |
-| Background sync | WorkManager 2.9.1 |
-| Backend | Supabase 3.0.3 (Auth + Postgrest + Realtime) |
-| Camera | CameraX 1.4.1 + ML Kit Barcode 17.3.0 |
-| Security | security-crypto 1.1.0-alpha06 + biometric 1.1.0 |
-| Storage | DataStore Preferences 1.1.1 |
-| Drag & Drop | Reorderable (LazyColumn reordering) |
