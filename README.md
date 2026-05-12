@@ -78,17 +78,28 @@ Three roles, one app:
 
 ---
 
-### Club Coordinator (CC) Flow *(in progress)*
+### Club Coordinator (CC) Flow
 
-- **`CcDashboard`** (`cc_dashboard`) — entry point for CC users. `CcDashboardViewModel` is implemented: loads all events created by the logged-in coordinator from Supabase (ordered by `created_at` descending) and computes a `PipelineStats` summary (draft / pending / approved / rejected counts). Logout is also handled here. Screen not yet built.
+- **`CcDashboard`** (`cc_dashboard`) — entry point for CC users. Fully implemented:
+  - Top bar with "MY PIPELINE" title, coordinator name subtitle, search toggle, refresh, and logout
+  - Pipeline stats grid: DRAFTS / IN REVIEW / APPROVED / REJECTED counts with color-coded icons
+  - Scrollable event list with pull-to-refresh; each row shows event title, date/time, and a color-coded status pill (Draft / In Review / Approved / Rejected)
+  - Search bar (toggle) to filter events by title or club name
+  - Logout confirmation dialog
 - **`CcEventDetail`** (`cc_event_detail/{eventId}`) — per-event detail screen. Fully implemented:
   - **Approval pipeline stepper** — 5-step visual stepper (Draft → PR Review → Teacher → HOD → Approved); rejected events show a distinct error banner instead
   - **Rejection remarks** — when an event is rejected, structured revision remarks (field + reason) are displayed in a card
   - **Event info** — title, club, date/time, location, registration deadline, description, plus a stats row showing registered count, capacity, and feedback question count
   - **Feedback toggle** — for approved events, a switch to open/close student feedback collection; optimistic update with revert on failure
   - **Submit for review** — for draft and rejected events, a button to advance the status to `pending_teacher`; rejected events show "RESUBMIT FOR REVIEW"
-  - **Activity report** — for approved events, shows current report status (draft / pending PR audit) and a button to open the report editor
 - **`CcReport`** (`cc_report/{eventId}`) — activity report editor; screen not yet built
+- **`CcLiveView`** (`cc_live_view/{eventId}`) — live attendance view for a specific event. Fully implemented:
+  - Top bar with "LIVE VIEW" title, event name subtitle, and a pulsing green "LIVE" indicator dot
+  - Summary bar showing four real-time counts: TOTAL / REGISTERED / SCANNED / PRESENT
+  - Scrollable attendee list sorted by status (PRESENT → SCANNED → REGISTERED), then alphabetically by name
+  - Each row shows an avatar initial, full name, USN, and a color-coded status badge
+  - Three statuses: **PRESENT** (checked in + feedback submitted, green), **SCANNED** (checked in, no feedback yet, amber), **REGISTERED** (not yet scanned, neutral)
+  - Live updates via Supabase Realtime — registration changes trigger a full list refresh; new feedback submissions flip the individual attendee's status in-place without a full reload
 
 **Approval pipeline statuses** (`ApprovalStatus`): `draft` → `pending_pr` → `pending_teacher` → `pending_hod` → `approved` / `rejected`. `PENDING_STATUSES` groups all three review stages for aggregate counts.
 
