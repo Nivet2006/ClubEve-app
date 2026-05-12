@@ -3,6 +3,7 @@ package com.clubeve.cc.ui.cc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,6 +31,7 @@ import com.clubeve.cc.models.CcEvent
 import com.clubeve.cc.models.PipelineStats
 import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.theme.*
+import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -49,6 +53,21 @@ fun CcDashboardScreen(
     // Search state
     var searchQuery by remember { mutableStateOf("") }
     var searchActive by remember { mutableStateOf(false) }
+
+    // ── Glassmorphism easter egg — 6 taps on "MY PIPELINE" title ─────────────
+    var titleTapCount by remember { mutableStateOf(0) }
+    var lastTapTime   by remember { mutableStateOf(0L) }
+    val isGlass = GlassState.isGlass
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var glassToastTrigger by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(glassToastTrigger) {
+        glassToastTrigger?.let { enabled ->
+            snackbarHostState.showSnackbar(
+                if (enabled) "✦ Glassmorphism enabled" else "✦ Glassmorphism disabled"
+            )
+        }
+    }
 
     val filteredEvents = remember(state.events, searchQuery) {
         if (searchQuery.isBlank()) state.events
@@ -89,14 +108,31 @@ fun CcDashboardScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures {
+                                val now = System.currentTimeMillis()
+                                if (now - lastTapTime > 2_000L) titleTapCount = 0
+                                lastTapTime = now
+                                titleTapCount++
+                                if (titleTapCount >= 6) {
+                                    titleTapCount = 0
+                                    GlassState.toggle()
+                                    glassToastTrigger = GlassState.isGlass
+                                    coroutineScope.launch {
+                                        ThemePrefsStore.saveGlass(context, GlassState.isGlass)
+                                    }
+                                }
+                            }
+                        }
+                    ) {
                         Text(
                             "MY PIPELINE",
                             fontFamily = Mono,
                             fontWeight = FontWeight.Black,
                             fontSize = 14.sp,
                             letterSpacing = 2.sp,
-                            color = cs.onBackground
+                            color = if (isGlass) GlassState.glassAccentColor else cs.onBackground
                         )
                         if (!profile?.fullName.isNullOrBlank()) {
                             Text(
