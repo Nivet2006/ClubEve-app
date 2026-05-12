@@ -121,7 +121,7 @@ class LoginViewModel : ViewModel() {
                     .select { filter { eq("id", userId) } }
                     .decodeSingle<Profile>()
 
-                if (profile.role != "pr" && profile.role != "student") {
+                if (profile.role != "pr" && profile.role != "student" && profile.role != "cc") {
                     client.auth.signOut()
                     SessionManager.clear()
                     _uiState.update {
