@@ -1,15 +1,16 @@
 # ClubEve App [![Build & Release](https://github.com/Nivet2006/ClubEve-app/actions/workflows/release.yml/badge.svg)](https://github.com/Nivet2006/ClubEve-app/actions/workflows/release.yml)
 
-An Android app for managing event attendance at college events. PR officers scan student QR codes or look up students manually to mark attendance. Students can view their registered events, QR codes, and attendance history.
+An Android app for managing event attendance at college events. PR officers scan student QR codes or look up students manually to mark attendance. Students can view their registered events, QR codes, and attendance history. Club Coordinators get a dedicated dashboard with per-event reporting.
 
 ---
 
 ## What It Does
 
-Two roles, one app:
+Three roles, one app:
 
 - **PR officers** — check in registered students at events via QR scan or manual USN lookup. Works fully offline; check-ins sync to the server automatically when connectivity is restored.
 - **Students** — view their registered events, check-in status, QR codes, and full attendance history.
+- **Club Coordinators (CC)** — view a dashboard of their club's events and drill into per-event attendance reports. *(Routes defined; screens in progress.)*
 
 ---
 
@@ -50,7 +51,7 @@ Two roles, one app:
 - Conflict resolution dialog when a remote timestamp differs from the local one
 
 **Secure Login**
-- Role-based access — PR officers and students only; any other role is rejected
+- Role-based access — PR officers, students, and Club Coordinators only; any other role is rejected
 - Optional biometric (fingerprint/face/PIN) unlock
 - Credentials stored with AES-256 GCM encryption
 - Screenshots and screen recording blocked on every screen (`FLAG_SECURE`)
@@ -74,6 +75,22 @@ Two roles, one app:
 - Each record shows event title, club, date, check-in time, and status:
   - **ATTENDED** — you were scanned in but haven't submitted feedback yet
   - **PRESENT** — you were scanned in and have submitted feedback
+
+---
+
+### Club Coordinator (CC) Flow *(in progress)*
+
+- **`CcDashboard`** (`cc_dashboard`) — entry point for CC users. `CcDashboardViewModel` is implemented: loads all events created by the logged-in coordinator from Supabase (ordered by `created_at` descending) and computes a `PipelineStats` summary (draft / pending / approved / rejected counts). Logout is also handled here. Screen not yet built.
+- **`CcEventDetail`** (`cc_event_detail/{eventId}`) — per-event detail screen. Fully implemented:
+  - **Approval pipeline stepper** — 5-step visual stepper (Draft → PR Review → Teacher → HOD → Approved); rejected events show a distinct error banner instead
+  - **Rejection remarks** — when an event is rejected, structured revision remarks (field + reason) are displayed in a card
+  - **Event info** — title, club, date/time, location, registration deadline, description, plus a stats row showing registered count, capacity, and feedback question count
+  - **Feedback toggle** — for approved events, a switch to open/close student feedback collection; optimistic update with revert on failure
+  - **Submit for review** — for draft and rejected events, a button to advance the status to `pending_teacher`; rejected events show "RESUBMIT FOR REVIEW"
+  - **Activity report** — for approved events, shows current report status (draft / pending PR audit) and a button to open the report editor
+- **`CcReport`** (`cc_report/{eventId}`) — activity report editor; screen not yet built
+
+**Approval pipeline statuses** (`ApprovalStatus`): `draft` → `pending_pr` → `pending_teacher` → `pending_hod` → `approved` / `rejected`. `PENDING_STATUSES` groups all three review stages for aggregate counts.
 
 ---
 
