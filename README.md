@@ -51,7 +51,7 @@ Three roles, one app:
 - Conflict resolution dialog when a remote timestamp differs from the local one
 
 **Secure Login**
-- Role-based access — PR officers, students, and Club Coordinators only; any other role is rejected
+- Role-based access — PR officers (`pr`), students (`student`), and Club Coordinators (`cc`) only; any other role is rejected at login
 - Optional biometric (fingerprint/face/PIN) unlock
 - Credentials stored with AES-256 GCM encryption
 - Screenshots and screen recording blocked on every screen (`FLAG_SECURE`)
