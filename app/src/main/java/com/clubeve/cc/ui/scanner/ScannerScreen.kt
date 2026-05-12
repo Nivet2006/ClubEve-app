@@ -58,6 +58,11 @@ fun ScannerScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
 
+    // Join presence channel for this event
+    LaunchedEffect(eventId) {
+        vm.joinPresence(eventId)
+    }
+
     LaunchedEffect(Unit) {
         if (!cameraPermission.status.isGranted) cameraPermission.launchPermissionRequest()
     }
@@ -164,7 +169,7 @@ private fun QRScanTab(
                 )
             }
 
-            // Batch counter badge — top-right
+            // Batch counter badge — top-right (my own scans)
             if (state.batchCount > 0) {
                 Surface(
                     modifier = Modifier
@@ -190,6 +195,42 @@ private fun QRScanTab(
                             fontSize = 11.sp,
                             color = Color.White
                         )
+                    }
+                }
+            }
+
+            // Co-PR peer badges — top-left, one per connected peer
+            if (state.peerScans.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    state.peerScans.entries.forEachIndexed { index, (_, count) ->
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color.Black.copy(alpha = 0.65f)
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = Color(0xFF64B5F6),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    "PR${index + 2}: $count",
+                                    fontFamily = Mono,
+                                    fontSize = 10.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
                     }
                 }
             }

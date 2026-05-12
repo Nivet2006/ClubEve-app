@@ -40,7 +40,8 @@ data class ScannerUiState(
     val cameraActive: Boolean = true,
     val isOfflineCheckIn: Boolean = false,
     val scanFlash: ScanFlash? = null,   // transient overlay for continuous QR mode
-    val batchCount: Int = 0             // running total of check-ins this session
+    val batchCount: Int = 0,            // running total of check-ins this session
+    val peerScans: Map<String, Int> = emptyMap() // userId → scanCount for co-PRs
 )
 
 class ScannerViewModel : ViewModel() {
@@ -48,6 +49,22 @@ class ScannerViewModel : ViewModel() {
     private val client = SupabaseClientProvider.client
     private val _state = MutableStateFlow(ScannerUiState())
     val state: StateFlow<ScannerUiState> = _state.asStateFlow()
+
+    private var currentEventId: String = ""
+
+    init {
+        // Mirror PrPresenceManager.peerScans into our UiState
+        viewModelScope.launch {
+            PrPresenceManager.peerScans.collect { peers ->
+                _state.update { it.copy(peerScans = peers) }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        PrPresenceManager.leave()
+    }
 
     /**
      * Tokens scanned recently — prevents the same QR from being processed twice
@@ -62,6 +79,14 @@ class ScannerViewModel : ViewModel() {
     fun onManualUsnChange(value: String) = _state.update { it.copy(manualUsn = value) }
     fun clearSnackbar() = _state.update { it.copy(snackbarMessage = null) }
     fun clearFlash() = _state.update { it.copy(scanFlash = null) }
+
+    /** Call once when the scanner screen opens for an event. */
+    fun joinPresence(eventId: String) {
+        if (currentEventId != eventId) {
+            currentEventId = eventId
+            PrPresenceManager.join(eventId, SessionManager.currentUserId)
+        }
+    }
 
     fun resetScanner() {
         _state.update {
@@ -198,6 +223,8 @@ class ScannerViewModel : ViewModel() {
                 batchCount = it.batchCount + 1
             )
         }
+        // Broadcast updated scan count to co-PRs on the same event
+        PrPresenceManager.incrementScan()
     }
 
     // ─── Manual USN tab (still uses ConfirmCard + explicit confirm) ──────────
@@ -242,6 +269,7 @@ class ScannerViewModel : ViewModel() {
                             isOfflineCheckIn = false
                         )
                     }
+                    PrPresenceManager.incrementScan()
                 } catch (e: Exception) {
                     _state.update {
                         it.copy(
