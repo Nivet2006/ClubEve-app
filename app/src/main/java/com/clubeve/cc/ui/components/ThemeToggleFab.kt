@@ -46,6 +46,7 @@ import com.clubeve.cc.ui.theme.GlassColorStore
 import com.clubeve.cc.ui.theme.GlassSurface
 import com.clubeve.cc.ui.theme.GlassState
 import com.clubeve.cc.ui.theme.Mono
+import com.clubeve.cc.ui.theme.ThemePrefsStore
 import com.clubeve.cc.ui.theme.ThemeState
 import com.clubeve.cc.ui.theme.White
 import kotlinx.coroutines.Dispatchers
@@ -199,6 +200,11 @@ fun ThemeToggleFab() {
 
                                 withContext(Dispatchers.Main) {
                                     ThemeState.isDark = next
+                                }
+
+                                // Persist the new dark mode preference
+                                launch(Dispatchers.IO) {
+                                    ThemePrefsStore.saveDark(context, next)
                                 }
 
                                 launch {

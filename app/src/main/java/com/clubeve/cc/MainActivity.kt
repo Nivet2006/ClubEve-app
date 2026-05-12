@@ -49,6 +49,7 @@ import com.clubeve.cc.ui.theme.GlassBorderColor
 import com.clubeve.cc.ui.theme.GlassColorStore
 import com.clubeve.cc.ui.theme.GlassSurface
 import com.clubeve.cc.ui.theme.GlassState
+import com.clubeve.cc.ui.theme.ThemePrefsStore
 import com.clubeve.cc.ui.theme.ThemeState
 import com.clubeve.cc.ui.theme.White
 import com.clubeve.cc.update.UpdateChecker
@@ -121,6 +122,18 @@ class MainActivity : AppCompatActivity() {
                     LaunchedEffect(Unit) {
                         GlassColorStore.accentColorFlow(applicationContext).collect { argb ->
                             GlassState.glassAccentColor = androidx.compose.ui.graphics.Color(argb.toInt())
+                        }
+                    }
+
+                    // Load saved dark/glass mode from DataStore
+                    LaunchedEffect(Unit) {
+                        ThemePrefsStore.isDarkFlow(applicationContext).collect { saved ->
+                            ThemeState.isDark = saved
+                        }
+                    }
+                    LaunchedEffect(Unit) {
+                        ThemePrefsStore.isGlassFlow(applicationContext).collect { saved ->
+                            GlassState.isGlass = saved
                         }
                     }
 

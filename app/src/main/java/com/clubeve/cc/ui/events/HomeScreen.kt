@@ -221,6 +221,9 @@ fun HomeScreen(
                                     titleTapCount = 0
                                     GlassState.toggle()
                                     glassToastTrigger = GlassState.isGlass
+                                    coroutineScope.launch {
+                                        ThemePrefsStore.saveGlass(context, GlassState.isGlass)
+                                    }
                                 }
                             }
                         }

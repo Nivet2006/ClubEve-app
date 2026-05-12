@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,7 +29,11 @@ import com.clubeve.cc.SessionManager
 import com.clubeve.cc.models.Event
 import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.ZonedDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -48,6 +53,8 @@ fun StudentHomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val cs = MaterialTheme.colorScheme
     val isGlass = GlassState.isGlass
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     // When the external FAB opens the sheet, kick off a fresh attendance load
     LaunchedEffect(showAttendanceSheet) {
@@ -132,6 +139,9 @@ fun StudentHomeScreen(
                                     titleTapCount = 0
                                     GlassState.toggle()
                                     glassToastTrigger = GlassState.isGlass
+                                    coroutineScope.launch {
+                                        ThemePrefsStore.saveGlass(context, GlassState.isGlass)
+                                    }
                                 }
                             }
                         }
@@ -377,6 +387,43 @@ private fun StudentEventCard(
         } catch (_: Exception) { event?.eventDate ?: "" }
     }
 
+    // ── Countdown: tick every second when event is today ─────────────────────
+    val eventDateTime = remember(event?.eventDate) {
+        try { ZonedDateTime.parse(event?.eventDate ?: "").withZoneSameInstant(ZoneId.systemDefault()) }
+        catch (_: Exception) { null }
+    }
+    val isToday = remember(eventDateTime) {
+        eventDateTime?.toLocalDate() == java.time.LocalDate.now()
+    }
+    var now by remember { mutableStateOf(ZonedDateTime.now(ZoneId.systemDefault())) }
+    LaunchedEffect(isToday) {
+        if (isToday) {
+            while (true) {
+                kotlinx.coroutines.delay(1_000L)
+                now = ZonedDateTime.now(ZoneId.systemDefault())
+            }
+        }
+    }
+    val countdownLabel: String? = remember(eventDateTime, now, isToday) {
+        if (!isToday || eventDateTime == null) return@remember null
+        val diff = Duration.between(now, eventDateTime)
+        when {
+            diff.isNegative && diff.abs().toMinutes() <= 120 -> "● HAPPENING NOW"
+            diff.isNegative -> null  // event ended (>2h ago), no chip
+            else -> {
+                val h = diff.toHours()
+                val m = diff.toMinutes() % 60
+                val s = diff.seconds % 60
+                when {
+                    h > 0  -> "starts in ${h}h ${m}m"
+                    m > 0  -> "starts in ${m}m ${s}s"
+                    else   -> "starts in ${s}s"
+                }
+            }
+        }
+    }
+    val isNow = countdownLabel?.startsWith("●") == true
+
     Column(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
             .background(cs.background).padding(horizontal = 16.dp, vertical = 14.dp)
@@ -422,6 +469,26 @@ private fun StudentEventCard(
                 Spacer(Modifier.width(4.dp))
                 Text(event!!.location!!, fontFamily = Mono,
                     fontSize = 11.sp, color = cs.onSurfaceVariant)
+            }
+        }
+        // ── Countdown chip — only shown when event is today ───────────────────
+        if (countdownLabel != null) {
+            Spacer(Modifier.height(8.dp))
+            val chipColor = if (isNow) StatusSuccess else cs.primary
+            Box(
+                modifier = Modifier
+                    .border(1.dp, chipColor, RoundedCornerShape(4.dp))
+                    .background(chipColor.copy(alpha = 0.10f), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    countdownLabel,
+                    fontFamily = Mono,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    letterSpacing = 0.5.sp,
+                    color = chipColor
+                )
             }
         }
         Spacer(Modifier.height(8.dp))
