@@ -28,6 +28,7 @@ Two roles, one app:
 - Flash overlay shows student name, USN, and status after each scan (auto-dismisses after 2s)
 - Haptic and audio feedback: double-beep for success, buzz for errors
 - Session counter tracks total check-ins for the current session
+- **Live PR presence** — when multiple PR officers are scanning the same event simultaneously, each officer can see the scan counts of other connected PRs in real time via Supabase Realtime Presence. Presence is best-effort; the scanner works normally if the channel is unavailable
 
 **Manual Check-In**
 - Look up any student by USN when QR scanning isn't possible
@@ -52,6 +53,7 @@ Two roles, one app:
 - Role-based access — PR officers and students only; any other role is rejected
 - Optional biometric (fingerprint/face/PIN) unlock
 - Credentials stored with AES-256 GCM encryption
+- Screenshots and screen recording blocked on every screen (`FLAG_SECURE`)
 
 **In-App Updates**
 - Silently checks GitHub Releases on every launch
@@ -78,6 +80,7 @@ Two roles, one app:
 ### Theme
 
 - Full light and dark mode with a smooth circular wipe animation (bottom-right FAB)
+- **Theme persistence** — dark mode and glassmorphism on/off state are saved to DataStore (`theme_prefs`) and restored automatically on next launch via `ThemePrefsStore`
 - **Glassmorphism mode** — deep purple-blue translucent palette; toggled by tapping the "MY EVENTS" title 6 times within 3 seconds (easter egg, available in both PR and student flows). The accent color is dynamic — `GlassState.glassAccentColor` drives the entire glass color scheme at runtime, so changing the accent recomposes the theme instantly without a restart.
 - **Glass accent color picker** — in glassmorphism mode, the bottom-right FAB switches from the dark/light toggle to a palette icon. Tapping it opens a `GlassColorPickerDialog` with a full HSV color wheel (hue ring, saturation/value square, brightness slider, live preview swatch), all styled to match the glass palette. The chosen color is persisted via `GlassColorStore` and restored on next launch.
 - The bottom-right theme FAB and the bottom-left attendance FAB (student flow) are both visible in all modes — normal, dark, and glassmorphism. In glass mode the attendance FAB uses `GlassSurface` background, `GlassBorderColor` border, and the current glass accent color for its icon tint.
