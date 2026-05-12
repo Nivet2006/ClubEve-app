@@ -46,6 +46,18 @@ fun CcDashboardScreen(
     val cs = MaterialTheme.colorScheme
     val profile = SessionManager.currentProfile
 
+    // Search state
+    var searchQuery by remember { mutableStateOf("") }
+    var searchActive by remember { mutableStateOf(false) }
+
+    val filteredEvents = remember(state.events, searchQuery) {
+        if (searchQuery.isBlank()) state.events
+        else state.events.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+            it.clubName.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
     LaunchedEffect(Unit) { if (state.events.isEmpty()) vm.load() }
     LaunchedEffect(state.error) {
         state.error?.let { snackbarHostState.showSnackbar(it) }
@@ -97,6 +109,13 @@ fun CcDashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { searchActive = !searchActive; if (!searchActive) searchQuery = "" }) {
+                        Icon(
+                            if (searchActive) Icons.Default.SearchOff else Icons.Default.Search,
+                            "Search",
+                            tint = cs.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = vm::load) {
                         Icon(Icons.Default.Refresh, "Refresh", tint = cs.onSurfaceVariant)
                     }
@@ -114,6 +133,45 @@ fun CcDashboardScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             HorizontalDivider(color = cs.outline, thickness = 1.dp)
+
+            // Search bar — shown when active
+            if (searchActive) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = {
+                        Text("Search events…", fontFamily = Mono, fontSize = 13.sp,
+                            color = cs.onSurfaceVariant.copy(alpha = 0.5f))
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, null, tint = cs.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp))
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, "Clear", tint = cs.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = cs.primary,
+                        unfocusedBorderColor = cs.outline,
+                        focusedContainerColor = cs.surface,
+                        unfocusedContainerColor = cs.surface,
+                        focusedTextColor = cs.onSurface,
+                        unfocusedTextColor = cs.onSurface,
+                        cursorColor = cs.primary
+                    )
+                )
+                HorizontalDivider(color = cs.outline)
+            }
 
             PullToRefreshBox(
                 isRefreshing = state.isLoading,
@@ -154,7 +212,7 @@ fun CcDashboardScreen(
                                 HorizontalDivider(color = cs.outline)
                             }
 
-                            if (state.events.isEmpty()) {
+                            if (filteredEvents.isEmpty()) {
                                 item {
                                     Box(
                                         modifier = Modifier
@@ -168,7 +226,8 @@ fun CcDashboardScreen(
                                         ) {
                                             Text("—", fontSize = 28.sp, color = cs.onSurfaceVariant)
                                             Text(
-                                                "No events in your pipeline yet.",
+                                                if (searchQuery.isNotBlank()) "No events match \"$searchQuery\""
+                                                else "No events in your pipeline yet.",
                                                 fontFamily = Mono,
                                                 fontSize = 12.sp,
                                                 color = cs.onSurfaceVariant
@@ -177,7 +236,7 @@ fun CcDashboardScreen(
                                     }
                                 }
                             } else {
-                                items(state.events, key = { it.id }) { event ->
+                                items(filteredEvents, key = { it.id }) { event ->
                                     CcEventRow(event = event, onClick = { onEventClick(event.id) })
                                     HorizontalDivider(color = cs.outlineVariant)
                                 }

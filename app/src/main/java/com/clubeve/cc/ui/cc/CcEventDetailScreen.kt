@@ -34,7 +34,7 @@ import java.util.Locale
 fun CcEventDetailScreen(
     eventId: String,
     onBack: () -> Unit,
-    onOpenReport: (eventId: String) -> Unit,
+    onLiveView: (eventId: String) -> Unit,
     vm: CcEventDetailViewModel = viewModel()
 ) {
     val state by vm.state.collectAsState()
@@ -159,13 +159,27 @@ fun CcEventDetailScreen(
                             }
                         }
 
-                        // ── Activity report (approved events only) ────────────
+                        // ── Live View button (approved events only) ──────────
                         if (event.approvalStatus == ApprovalStatus.APPROVED) {
-                            ReportSection(
-                                reportStatus = state.report?.status,
-                                onOpenReport = { onOpenReport(event.id) },
-                                cs = cs
-                            )
+                            Button(
+                                onClick = { onLiveView(event.id) },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = cs.primary),
+                                elevation = ButtonDefaults.buttonElevation(0.dp)
+                            ) {
+                                Icon(Icons.Default.Visibility, null,
+                                    modifier = Modifier.size(16.dp), tint = cs.onPrimary)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "LIVE VIEW",
+                                    fontFamily = Mono,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    letterSpacing = 1.sp,
+                                    color = cs.onPrimary
+                                )
+                            }
                         }
                     }
                 }
@@ -421,52 +435,5 @@ private fun FeedbackToggleRow(
     }
 }
 
-// ── Report section ────────────────────────────────────────────────────────────
 
-@Composable
-private fun ReportSection(
-    reportStatus: String?,
-    onOpenReport: () -> Unit,
-    cs: ColorScheme
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("ACTIVITY REPORT", fontFamily = Mono, fontSize = 9.sp,
-            letterSpacing = 2.sp, color = cs.onSurfaceVariant)
 
-        if (reportStatus != null) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, cs.outline, RoundedCornerShape(8.dp))
-                    .background(cs.surface, RoundedCornerShape(8.dp))
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val (icon, color, label) = when (reportStatus) {
-                    "pending_pr" -> Triple(Icons.Default.HourglassEmpty, Color(0xFFF59E0B), "Submitted — Awaiting PR Audit")
-                    else         -> Triple(Icons.Default.Edit, cs.onSurfaceVariant, "Draft saved")
-                }
-                Icon(icon, null, tint = color, modifier = Modifier.size(14.dp))
-                Text(label, fontFamily = Mono, fontSize = 11.sp, color = color)
-            }
-        }
-
-        OutlinedButton(
-            onClick = onOpenReport,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(8.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, cs.primary),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onBackground)
-        ) {
-            Icon(Icons.Default.Description, null,
-                modifier = Modifier.size(16.dp), tint = cs.onBackground)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                if (reportStatus == null) "WRITE ACTIVITY REPORT" else "EDIT REPORT",
-                fontFamily = Mono, fontWeight = FontWeight.Bold,
-                fontSize = 11.sp, letterSpacing = 1.sp, color = cs.onBackground
-            )
-        }
-    }
-}
