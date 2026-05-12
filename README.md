@@ -93,6 +93,14 @@ Three roles, one app:
   - **Feedback toggle** — for approved events, a switch to open/close student feedback collection; optimistic update with revert on failure
   - **Submit for review** — for draft and rejected events, a button to advance the status to `pending_teacher`; rejected events show "RESUBMIT FOR REVIEW"
 - **`CcReport`** (`cc_report/{eventId}`) — activity report editor; screen not yet built
+- **`CcFeedbackEditor`** (`cc_feedback_editor/{eventId}`) — feedback question editor for a specific event. Fully implemented:
+  - Top bar with "FEEDBACK QUESTIONS" title, event name subtitle, and a **SAVE** button (enabled only when there are unsaved changes)
+  - Add, edit, remove, and **drag-to-reorder** questions via the `sh.calvin.reorderable` library; haptic feedback on drag start and reorder
+  - Seven question types: Short Text, Long Text, Rating (1–5), Multiple Choice, Checkboxes, Yes/No, Dropdown
+  - Options field (comma-separated) shown only for choice-based types (Multiple Choice, Checkboxes, Dropdown)
+  - Required toggle per question
+  - Validation on save: minimum 3 questions required; all questions must have a non-blank label
+  - Empty state and drag-hint banner when more than one question exists
 - **`CcLiveView`** (`cc_live_view/{eventId}`) — live attendance view for a specific event. Fully implemented:
   - Top bar with "LIVE VIEW" title, event name subtitle, and a pulsing green "LIVE" indicator dot
   - Summary bar showing four real-time counts: TOTAL / REGISTERED / SCANNED / PRESENT
@@ -137,3 +145,4 @@ Three roles, one app:
 | Camera | CameraX 1.4.1 + ML Kit Barcode 17.3.0 |
 | Security | security-crypto 1.1.0-alpha06 + biometric 1.1.0 |
 | Storage | DataStore Preferences 1.1.1 |
+| Drag & Drop | Reorderable (LazyColumn reordering) |
