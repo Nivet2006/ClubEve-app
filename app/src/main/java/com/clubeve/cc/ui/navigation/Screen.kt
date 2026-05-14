@@ -17,6 +17,11 @@ sealed class Screen(val route: String) {
     object StudentQr : Screen("student_qr/{registrationId}") {
         fun createRoute(registrationId: String) = "student_qr/$registrationId"
     }
+    // ── Faculty flow ──────────────────────────────────────────────────────────
+    object FacultyDashboard : Screen("faculty_dashboard")
+    object FacultyEventDetail : Screen("faculty_event_detail/{eventId}") {
+        fun createRoute(eventId: String) = "faculty_event_detail/$eventId"
+    }
     // ── CC (Club Coordinator) flow ────────────────────────────────────────────
     object CcDashboard : Screen("cc_dashboard")
     object CcEventDetail : Screen("cc_event_detail/{eventId}") {

@@ -30,6 +30,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.clubeve.cc.ui.attendance.AttendeeListScreen
 import com.clubeve.cc.ui.cc.CcDashboardScreen
+import com.clubeve.cc.ui.faculty.FacultyDashboardScreen
+import com.clubeve.cc.ui.faculty.FacultyEventDetailScreen
 import com.clubeve.cc.ui.cc.CcEventDetailScreen
 import com.clubeve.cc.ui.cc.CcFeedbackEditorScreen
 import com.clubeve.cc.ui.cc.CcLiveScreen
@@ -100,7 +102,8 @@ fun AppNavGraph(
                         val destination = when (role) {
                             "student" -> Screen.StudentHome.route
                             "cc"      -> Screen.CcDashboard.route
-                            else      -> Screen.Home.route  // pr, teacher, hod, manager, admin
+                            "teacher", "hod", "admin", "manager" -> Screen.FacultyDashboard.route
+                            else      -> Screen.Home.route  // pr
                         }
                         navController.navigate(destination) {
                             popUpTo(Screen.Login.route) { inclusive = true }
@@ -189,9 +192,33 @@ fun AppNavGraph(
                 )
             }
 
+            // ── Faculty flow ──────────────────────────────────────────────────
+            composable(Screen.FacultyDashboard.route) {
+                FacultyDashboardScreen(
+                    onEventClick = { eventId ->
+                        navController.navigate(Screen.FacultyEventDetail.createRoute(eventId))
+                    },
+                    onLogout = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.FacultyEventDetail.route,
+                arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+            ) { backStack ->
+                val eventId = backStack.arguments?.getString("eventId")!!
+                FacultyEventDetailScreen(
+                    eventId = eventId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             // ── CC (Club Coordinator) flow ─────────────────────────────────────
-            composable(Screen.CcDashboard.route) {
-                CcDashboardScreen(
+            composable(Screen.CcDashboard.route) {                CcDashboardScreen(
                     onEventClick = { eventId ->
                         navController.navigate(Screen.CcEventDetail.createRoute(eventId))
                     },
