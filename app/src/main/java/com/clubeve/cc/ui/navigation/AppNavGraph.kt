@@ -52,7 +52,8 @@ fun AppNavGraph(
     navController: NavHostController,
     startDestination: String = Screen.Login.route,
     showStudentAttendance: Boolean = false,
-    onStudentAttendanceDismiss: () -> Unit = {}
+    onStudentAttendanceDismiss: () -> Unit = {},
+    splashDone: Boolean = true
 ) {
     val context = LocalContext.current
     val isOnline by produceState(initialValue = true) {
@@ -108,7 +109,8 @@ fun AppNavGraph(
                         navController.navigate(destination) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
-                    }
+                    },
+                    titleVisible = splashDone
                 )
             }
 

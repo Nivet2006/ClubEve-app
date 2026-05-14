@@ -198,7 +198,8 @@ class MainActivity : AppCompatActivity() {
                                 navController = navController,
                                 startDestination = dest,
                                 showStudentAttendance = showStudentAttendance,
-                                onStudentAttendanceDismiss = { showStudentAttendance = false }
+                                onStudentAttendanceDismiss = { showStudentAttendance = false },
+                                splashDone = splashDone
                             )
                         }
                     }

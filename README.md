@@ -51,7 +51,8 @@ Three roles, one app:
 - Conflict resolution dialog when a remote timestamp differs from the local one
 
 **Secure Login**
-- Role-based access — PR officers (`pr`), students (`student`), and Club Coordinators (`cc`) only; any other role is rejected at login
+- Role-based access — accepted roles: `pr`, `student`, `cc`, `teacher`, `hod`, `manager`, `admin`; any other role is rejected at login
+- Role routing: `pr` → PR officer home; `student` → student home; `cc` → CC dashboard; `teacher` / `hod` / `manager` / `admin` → Faculty dashboard. Routing applies both at login and when the app is relaunched with an existing session.
 - Optional biometric (fingerprint/face/PIN) unlock
 - Credentials stored with AES-256 GCM encryption
 - Screenshots and screen recording blocked on every screen (`FLAG_SECURE`)
@@ -75,6 +76,24 @@ Three roles, one app:
 - Each record shows event title, club, date, check-in time, and status:
   - **ATTENDED** — you were scanned in but haven't submitted feedback yet
   - **PRESENT** — you were scanned in and have submitted feedback
+
+---
+
+### Faculty / Staff Flow
+
+- **`FacultyDashboard`** (`faculty_dashboard`) — entry point for `teacher`, `hod`, `admin`, and `manager` roles. Fully implemented:
+  - Top bar with "FACULTY REVIEW" title, full name + role subtitle, refresh button, and logout
+  - Time-of-day greeting ("Good Morning / Afternoon / Evening") with the user's first name and department
+  - **Pending Actions** section — events awaiting the logged-in user's approval action, with an amber left-border accent and count badge:
+    - `teacher` → events with status `pending_teacher` filtered to the user's department
+    - `hod` → events with status `pending_hod` filtered to the user's department
+    - `admin` / `manager` → all events with status `pending_teacher` or `pending_hod` across all departments
+  - **Verified & Live** section — events the user has already acted on (`pending_hod` or `approved`), with a green left-border accent; filtered by department for teacher/HOD roles, all departments for admin/manager
+  - Each event card shows title, date/time, targeted department, and a color-coded status pill (PUBLISHED / HOD PENDING / PENDING)
+  - Search bar (toggle) to filter events by title across both the Pending Actions and Verified & Live sections simultaneously; the section count badge and empty-state messages update to reflect the active search query
+  - Pull-to-refresh, logout confirmation dialog, and glassmorphism easter egg (6-tap title trigger)
+  - Logout support via `logout(onDone)`
+- **`FacultyEventDetail`** (`faculty_event_detail/{eventId}`) — per-event detail screen for faculty/staff. Route defined; screen not yet built.
 
 ---
 
@@ -115,10 +134,11 @@ Three roles, one app:
 
 ### Splash Screen
 
-- Animated full-screen splash plays once on every app launch (~1.7 s total)
-- Timeline: text fades in on a white background → background cross-fades to dark (or the glass radial gradient) while the text color transitions from black to white → entire splash fades out
+- Animated full-screen splash plays once on every app launch (~4.15 s total)
+- Timeline: text fades in on a white background (700 ms) → holds on white (800 ms) → background and text color cross-fade to dark (1200 ms) → holds at dark (600 ms) → background fades out while text shrinks from 28 sp → 22 sp and letter spacing narrows from 6 sp → 2 sp (600 ms, morphing into the login title) → text fades out (250 ms)
 - In glassmorphism mode the dark target is the deep purple-blue radial gradient used throughout the app; in normal mode it fades to solid black
 - Implemented as a stateless `SplashScreen` composable in `ui/components/SplashScreen.kt`; accepts a single `onDone` callback invoked when the animation completes
+- The navigation host (and therefore the login/biometric flow) is not rendered until the splash finishes — prevents the auth UI from flashing beneath the splash overlay
 
 ---
 

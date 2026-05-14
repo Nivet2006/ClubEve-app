@@ -15,120 +15,126 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import com.clubeve.cc.ui.theme.GlassState
 import com.clubeve.cc.ui.theme.Mono
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
- * Full-screen splash that plays once on app start.
+ * Full-screen splash with a morphing exit:
  *
- * Timeline (total ~1 700 ms):
- *   0 ms   → text fades IN on white bg          (300 ms)
- *   700 ms → bg cross-fades white→dark, text black→white (500 ms)
- *   1 400 ms → entire splash fades OUT           (300 ms)
- *   1 700 ms → [onDone] called
- *
- * When glassmorphism is active the "dark" target is the deep purple-blue
- * radial gradient; otherwise it is solid black.
+ * Timeline:
+ *   0        → text fades IN on white bg          (700 ms)
+ *   700      → hold on white                      (800 ms)
+ *   1 500    → bg + text cross-fade white→dark    (1 200 ms)
+ *   2 700    → hold at dark                       (600 ms)
+ *   3 300    → bg fades out, text shrinks 28→22sp (600 ms)  ← morphs into login title
+ *   3 900    → text fades out                     (250 ms)
+ *   4 150    → [onDone] called
  */
 @Composable
 fun SplashScreen(onDone: () -> Unit) {
     val isGlass = GlassState.isGlass
 
-    // ── Animatables ───────────────────────────────────────────────────────────
-    // textAlpha: 0 → 1 (fade-in), stays 1, then whole splash fades out via splashAlpha
+    // 0..1  text opacity during fade-in phase
     val textAlpha   = remember { Animatable(0f) }
-    // bgProgress: 0 = white, 1 = dark/glass
+    // 0..1  bg progress: 0=white, 1=dark
     val bgProgress  = remember { Animatable(0f) }
-    // splashAlpha: 1 → 0 (final fade-out of the whole overlay)
-    val splashAlpha = remember { Animatable(1f) }
-
-    val scope = rememberCoroutineScope()
+    // 0..1  bg alpha during exit (1=opaque, 0=transparent)
+    val bgAlpha     = remember { Animatable(1f) }
+    // 0..1  text shrink progress: 0=28sp, 1=22sp
+    val shrinkProg  = remember { Animatable(0f) }
+    // 0..1  final text fade-out
+    val textFadeOut = remember { Animatable(1f) }
 
     LaunchedEffect(Unit) {
-        // 1. Text fades in on white bg
-        textAlpha.animateTo(
-            1f,
-            animationSpec = tween(700, easing = FastOutSlowInEasing)
-        )
+        // 1. Text fades in on white
+        textAlpha.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
 
         // 2. Hold on white
         delay(800)
 
-        // 3. Bg + text color cross-fade simultaneously
-        bgProgress.animateTo(
-            1f,
-            animationSpec = tween(1200, easing = FastOutSlowInEasing)
-        )
+        // 3. Bg + text color cross-fade white → dark
+        bgProgress.animateTo(1f, tween(1200, easing = FastOutSlowInEasing))
 
-        // 4. Hold at dark state
+        // 4. Hold at dark
         delay(600)
 
-        // 5. Fade out the whole splash
-        splashAlpha.animateTo(
-            0f,
-            animationSpec = tween(700, easing = FastOutSlowInEasing)
-        )
+        // 5. Bg fades out + text shrinks simultaneously (morphs into login title)
+        bgAlpha.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
+        shrinkProg.animateTo(1f, tween(600, easing = FastOutSlowInEasing))
+
+        // 6. Text fades out
+        textFadeOut.animateTo(0f, tween(250, easing = FastOutSlowInEasing))
 
         onDone()
     }
 
-    // ── Derived colors ────────────────────────────────────────────────────────
-    val p = bgProgress.value   // 0..1
+    val p = bgProgress.value
 
-    // Text color: black → white
+    // Text color: black → white during phase 3, stays white during exit
     val textColor = lerp(Color.Black, Color.White, p)
 
+    // Font size: 28sp → 22sp during exit phase
+    val fontSize: TextUnit = lerp(28.sp, 22.sp, shrinkProg.value)
+
+    // Letter spacing: 6sp → 2sp during exit
+    val letterSpacing: TextUnit = lerp(6.sp, 2.sp, shrinkProg.value)
+
+    // Combined text alpha
+    val combinedTextAlpha = textAlpha.value * textFadeOut.value
+
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .alpha(splashAlpha.value),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        // Background layer
-        if (isGlass && p > 0f) {
-            // Glass: blend white → deep purple gradient
-            // Draw white base first, then the gradient on top with increasing alpha
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(lerp(Color.White, Color.Black, p))
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(p)
-                    .background(
-                        Brush.radialGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color(0xFF1A0A3D),
-                                0.4f to Color(0xFF0D0D2B),
-                                0.7f to Color(0xFF050518),
-                                1.0f to Color(0xFF000008)
+        // Background — fades out in exit phase
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(bgAlpha.value)
+        ) {
+            if (isGlass && p > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(lerp(Color.White, Color.Black, p))
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(p)
+                        .background(
+                            Brush.radialGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color(0xFF1A0A3D),
+                                    0.4f to Color(0xFF0D0D2B),
+                                    0.7f to Color(0xFF050518),
+                                    1.0f to Color(0xFF000008)
+                                )
                             )
                         )
-                    )
-            )
-        } else {
-            // Normal: white → black
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(lerp(Color.White, Color.Black, p))
-            )
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(lerp(Color.White, Color.Black, p))
+                )
+            }
         }
 
-        // Text
+        // Text — stays centered, shrinks and fades during exit
         Text(
             text = "CLUB-EVE",
             fontFamily = Mono,
             fontWeight = FontWeight.Black,
-            fontSize = 28.sp,
-            letterSpacing = 6.sp,
+            fontSize = fontSize,
+            letterSpacing = letterSpacing,
             color = textColor,
-            modifier = Modifier.alpha(textAlpha.value)
+            modifier = Modifier.alpha(combinedTextAlpha)
         )
     }
 }

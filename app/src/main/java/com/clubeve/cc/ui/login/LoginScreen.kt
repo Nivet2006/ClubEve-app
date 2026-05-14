@@ -4,6 +4,8 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -44,6 +46,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(
     onLoginSuccess: (role: String) -> Unit,
+    titleVisible: Boolean = true,
     viewModel: LoginViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -105,7 +108,14 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text("CLUB-EVE", fontFamily = Mono, fontWeight = FontWeight.Black,
-                fontSize = 22.sp, letterSpacing = 2.sp, color = cs.onBackground)
+                fontSize = 22.sp, letterSpacing = 2.sp, color = cs.onBackground,
+                modifier = Modifier.alpha(
+                    animateFloatAsState(
+                        targetValue = if (titleVisible) 1f else 0f,
+                        animationSpec = tween(300),
+                        label = "titleAlpha"
+                    ).value
+                ))
 
             Spacer(Modifier.height(40.dp))
 
