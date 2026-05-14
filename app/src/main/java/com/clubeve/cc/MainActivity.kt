@@ -192,12 +192,15 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     startDestination?.let { dest ->
-                        AppNavGraph(
-                            navController = navController,
-                            startDestination = dest,
-                            showStudentAttendance = showStudentAttendance,
-                            onStudentAttendanceDismiss = { showStudentAttendance = false }
-                        )
+                        // Don't render the NavHost (and trigger biometric/login) until splash is done
+                        if (splashDone) {
+                            AppNavGraph(
+                                navController = navController,
+                                startDestination = dest,
+                                showStudentAttendance = showStudentAttendance,
+                                onStudentAttendanceDismiss = { showStudentAttendance = false }
+                            )
+                        }
                     }
 
                     // Theme toggle FAB (bottom-right).
