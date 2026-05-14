@@ -51,25 +51,25 @@ fun SplashScreen(onDone: () -> Unit) {
         // 1. Text fades in on white bg
         textAlpha.animateTo(
             1f,
-            animationSpec = tween(500, easing = FastOutSlowInEasing)
+            animationSpec = tween(700, easing = FastOutSlowInEasing)
         )
 
-        // 2. Hold briefly
-        delay(600)
+        // 2. Hold on white
+        delay(800)
 
         // 3. Bg + text color cross-fade simultaneously
         bgProgress.animateTo(
             1f,
-            animationSpec = tween(900, easing = FastOutSlowInEasing)
+            animationSpec = tween(1200, easing = FastOutSlowInEasing)
         )
 
         // 4. Hold at dark state
-        delay(400)
+        delay(600)
 
         // 5. Fade out the whole splash
         splashAlpha.animateTo(
             0f,
-            animationSpec = tween(500, easing = FastOutSlowInEasing)
+            animationSpec = tween(700, easing = FastOutSlowInEasing)
         )
 
         onDone()

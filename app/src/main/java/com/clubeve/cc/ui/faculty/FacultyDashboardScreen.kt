@@ -85,6 +85,30 @@ fun FacultyDashboardScreen(
         }
     }
 
+    // ── Search state ──────────────────────────────────────────────────────────
+    var searchQuery  by remember { mutableStateOf("") }
+    var searchActive by remember { mutableStateOf(false) }
+
+    val allEvents = remember(state.pendingEvents, state.verifiedEvents) {
+        state.pendingEvents + state.verifiedEvents
+    }
+    val filteredPending = remember(state.pendingEvents, searchQuery) {
+        if (searchQuery.isBlank()) state.pendingEvents
+        else state.pendingEvents.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+            it.clubName.contains(searchQuery, ignoreCase = true) ||
+            it.targetedDepartment?.contains(searchQuery, ignoreCase = true) == true
+        }
+    }
+    val filteredVerified = remember(state.verifiedEvents, searchQuery) {
+        if (searchQuery.isBlank()) state.verifiedEvents
+        else state.verifiedEvents.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+            it.clubName.contains(searchQuery, ignoreCase = true) ||
+            it.targetedDepartment?.contains(searchQuery, ignoreCase = true) == true
+        }
+    }
+
     LaunchedEffect(Unit) { vm.load() }
     LaunchedEffect(state.error) {
         state.error?.let { snackbarHostState.showSnackbar(it) }
@@ -175,6 +199,16 @@ fun FacultyDashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        searchActive = !searchActive
+                        if (!searchActive) searchQuery = ""
+                    }) {
+                        Icon(
+                            if (searchActive) Icons.Default.SearchOff else Icons.Default.Search,
+                            "Search",
+                            tint = cs.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = vm::load) {
                         Icon(Icons.Default.Refresh, "Refresh", tint = cs.onSurfaceVariant)
                     }
@@ -192,6 +226,45 @@ fun FacultyDashboardScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             HorizontalDivider(color = cs.outline, thickness = 1.dp)
+
+            // Search bar
+            if (searchActive) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = {
+                        Text("Search events…", fontFamily = Mono, fontSize = 13.sp,
+                            color = cs.onSurfaceVariant.copy(alpha = 0.5f))
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, null, tint = cs.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp))
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, "Clear", tint = cs.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = cs.primary,
+                        unfocusedBorderColor = cs.outline,
+                        focusedContainerColor = cs.surface,
+                        unfocusedContainerColor = cs.surface,
+                        focusedTextColor = cs.onSurface,
+                        unfocusedTextColor = cs.onSurface,
+                        cursorColor = cs.primary
+                    )
+                )
+                HorizontalDivider(color = cs.outline)
+            }
 
             PullToRefreshBox(
                 isRefreshing = state.isLoading,
@@ -244,20 +317,21 @@ fun FacultyDashboardScreen(
                             // ── Pending Actions section ───────────────────────
                             item {
                                 SectionHeader(
-                                    title = "PENDING ACTIONS (${state.pendingEvents.size})",
+                                    title = "PENDING ACTIONS (${filteredPending.size})",
                                     accentColor = Color(0xFFF59E0B)
                                 )
                             }
 
-                            if (state.pendingEvents.isEmpty()) {
+                            if (filteredPending.isEmpty()) {
                                 item {
                                     EmptyState(
-                                        message = "No pending events to review.",
+                                        message = if (searchQuery.isNotBlank()) "No pending events match \"$searchQuery\""
+                                                  else "No pending events to review.",
                                         modifier = Modifier.padding(vertical = 24.dp)
                                     )
                                 }
                             } else {
-                                items(state.pendingEvents, key = { "pending_${it.id}" }) { event ->
+                                items(filteredPending, key = { "pending_${it.id}" }) { event ->
                                     FacultyEventCard(
                                         event = event,
                                         isPending = true,
@@ -277,15 +351,16 @@ fun FacultyDashboardScreen(
                                 )
                             }
 
-                            if (state.verifiedEvents.isEmpty()) {
+                            if (filteredVerified.isEmpty()) {
                                 item {
                                     EmptyState(
-                                        message = "No verified events yet.",
+                                        message = if (searchQuery.isNotBlank()) "No verified events match \"$searchQuery\""
+                                                  else "No verified events yet.",
                                         modifier = Modifier.padding(vertical = 24.dp)
                                     )
                                 }
                             } else {
-                                items(state.verifiedEvents, key = { "verified_${it.id}" }) { event ->
+                                items(filteredVerified, key = { "verified_${it.id}" }) { event ->
                                     FacultyEventCard(
                                         event = event,
                                         isPending = false,
