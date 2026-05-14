@@ -63,9 +63,22 @@ desktop.ini
 .aws/sso/
 .claude/
 
-# ─── Docs ────────────────────────────────────────────────────────────────────
+# ─── Steering & Documentation ────────────────────────────────────────────────
+.kiro/steering/*.md
 PRIVATEREADME.md
 handoff.md
+README.md
+
+# ─── Security & Credentials ──────────────────────────────────────────────────
+**/credentials.json
+**/secrets.json
+**/.env
+**/.env.*
+!**/.env.example
+*password*
+*secret*
+*token*
+!**/build.gradle.kts
 
 # ─── ProGuard ─────────────────────────────────────────────────────────────────
 proguard-rules.pro
