@@ -173,6 +173,10 @@ class MainActivity : AppCompatActivity() {
                                         SessionManager.currentUserId = user.id
                                         SessionManager.currentProfile = profile
                                         startDestination = Screen.CcDashboard.route
+                                    } else if (profile.role in setOf("teacher", "hod", "manager", "admin")) {
+                                        SessionManager.currentUserId = user.id
+                                        SessionManager.currentProfile = profile
+                                        startDestination = Screen.Home.route
                                     } else {
                                         try { client.auth.signOut() } catch (_: Exception) {}
                                         SessionManager.clear()

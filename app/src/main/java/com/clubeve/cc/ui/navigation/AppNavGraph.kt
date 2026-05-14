@@ -100,7 +100,7 @@ fun AppNavGraph(
                         val destination = when (role) {
                             "student" -> Screen.StudentHome.route
                             "cc"      -> Screen.CcDashboard.route
-                            else      -> Screen.Home.route  // pr and any other staff role
+                            else      -> Screen.Home.route  // pr, teacher, hod, manager, admin
                         }
                         navController.navigate(destination) {
                             popUpTo(Screen.Login.route) { inclusive = true }

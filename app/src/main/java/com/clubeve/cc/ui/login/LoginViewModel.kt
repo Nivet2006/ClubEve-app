@@ -121,7 +121,8 @@ class LoginViewModel : ViewModel() {
                     .select { filter { eq("id", userId) } }
                     .decodeSingle<Profile>()
 
-                if (profile.role != "pr" && profile.role != "student" && profile.role != "cc") {
+                val staffRoles = setOf("pr", "student", "cc", "teacher", "hod", "manager", "admin")
+                if (profile.role !in staffRoles) {
                     client.auth.signOut()
                     SessionManager.clear()
                     _uiState.update {
