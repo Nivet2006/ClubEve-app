@@ -336,7 +336,8 @@ private fun FacultyReviewPanel(
                     fontFamily = Mono,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
-                    letterSpacing = 1.sp
+                    letterSpacing = 1.sp,
+                    color = if (authorizeSelected) StatusSuccess else cs.onSurface
                 )
             }
 
@@ -368,7 +369,8 @@ private fun FacultyReviewPanel(
                     fontFamily = Mono,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
-                    letterSpacing = 1.sp
+                    letterSpacing = 1.sp,
+                    color = if (declineSelected) StatusError else cs.onSurface
                 )
             }
         }
