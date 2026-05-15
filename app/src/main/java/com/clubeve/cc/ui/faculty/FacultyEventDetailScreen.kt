@@ -4,8 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -16,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,7 +24,6 @@ import com.clubeve.cc.models.ApprovalStatus
 import com.clubeve.cc.models.CcEvent
 import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.theme.*
-import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -85,7 +81,9 @@ fun FacultyEventDetailScreen(
                 )
             )
         },
-        containerColor = cs.background
+        containerColor = cs.background,
+        // Let the scroll column handle IME insets itself via imePadding()
+        contentWindowInsets = WindowInsets(0)
     ) { padding ->
         when {
             state.isLoading -> {
@@ -119,6 +117,7 @@ fun FacultyEventDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
+                        .imePadding()
                         .verticalScroll(rememberScrollState())
                 ) {
                     HorizontalDivider(color = cs.outline)
@@ -448,7 +447,6 @@ private fun FacultyReviewPanel(
 
 // ── PR Assignment panel ───────────────────────────────────────────────────────
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun PrAssignmentPanel(
     eventId: String,
@@ -618,35 +616,13 @@ private fun PrAssignmentPanel(
 
         // Search picker
         if (showSearch) {
-            val bringIntoViewRequester = remember { BringIntoViewRequester() }
-            val coroutineScope = rememberCoroutineScope()
-
-            // Scroll the search field + results into view whenever results change
-            LaunchedEffect(searchResults) {
-                if (searchResults.isNotEmpty()) {
-                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(bringIntoViewRequester),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = {
                     searchQuery = it
                     onSearch(it)
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { focusState ->
-                        if (focusState.isFocused) {
-                            coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
-                        }
-                    },
+                modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
                         "Search by name or USN…",
@@ -787,7 +763,6 @@ private fun PrAssignmentPanel(
                     )
                 }
             }
-            } // end search Column
         }
     }
 }
