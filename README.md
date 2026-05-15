@@ -94,7 +94,7 @@ app/src/main/java/com/clubeve/cc/
 │   ├── scanner/             # QR scanner screen
 │   ├── student/             # Student screens
 │   └── theme/               # Theme & styling
-├── utils/                   # Utilities
+├── utils/                   # Utilities (NetworkMonitor, ScanFeedback, ShakeDetector)
 ├── ClubEveApplication.kt    # Application class
 ├── MainActivity.kt          # Single activity host
 └── SessionManager.kt        # Session management

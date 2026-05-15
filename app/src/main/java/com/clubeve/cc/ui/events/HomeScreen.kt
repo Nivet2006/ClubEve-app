@@ -33,6 +33,7 @@ import com.clubeve.cc.notifications.AssignmentWatcher
 import com.clubeve.cc.ui.components.AppSnackbarHost
 import com.clubeve.cc.ui.theme.*
 import com.clubeve.cc.utils.NetworkMonitor
+import com.clubeve.cc.utils.ShakeDetector
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -46,6 +47,7 @@ import java.util.Locale
 fun HomeScreen(
     onEventClick: (String) -> Unit,
     onLogout: () -> Unit,
+    onScanEvent: (String) -> Unit = {},   // navigate directly to scanner for an event
     vm: HomeViewModel = viewModel()
 ) {
     val state by vm.state.collectAsState()
@@ -59,6 +61,100 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val cs = MaterialTheme.colorScheme
+
+    // ── Shake-to-scan (PR only) ───────────────────────────────────────────────
+    // If one event → go straight to scanner.
+    // If multiple events → show a quick-pick bottom sheet.
+    var showShakeEventPicker by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        val detector = ShakeDetector(context) {
+            val events = vm.state.value.events
+            when {
+                events.isEmpty() -> { /* nothing assigned, ignore */ }
+                events.size == 1 -> onScanEvent(events.first().id)
+                else             -> showShakeEventPicker = true
+            }
+        }
+        detector.start()
+        onDispose { detector.stop() }
+    }
+
+    // ── Shake event picker bottom sheet ──────────────────────────────────────
+    if (showShakeEventPicker) {
+        ModalBottomSheet(
+            onDismissRequest = { showShakeEventPicker = false },
+            containerColor = cs.surface,
+            tonalElevation = 0.dp,
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Icon(
+                        Icons.Default.QrCodeScanner,
+                        contentDescription = null,
+                        tint = cs.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "SCAN FOR WHICH EVENT?",
+                        fontFamily = Mono,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp,
+                        letterSpacing = 1.5.sp,
+                        color = cs.onSurface
+                    )
+                }
+                HorizontalDivider(color = cs.outline)
+                Spacer(Modifier.height(8.dp))
+                state.events.forEach { event ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showShakeEventPicker = false
+                                onScanEvent(event.id)
+                            }
+                            .padding(vertical = 14.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                event.title,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = cs.onSurface
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                event.clubName.uppercase(),
+                                fontFamily = Mono,
+                                fontSize = 10.sp,
+                                letterSpacing = 1.sp,
+                                color = cs.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = cs.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    HorizontalDivider(color = cs.outlineVariant)
+                }
+            }
+        }
+    }
 
     // ── Glassmorphism easter egg — 6 taps on "MY EVENTS" title ───────────────
     var titleTapCount by remember { mutableStateOf(0) }

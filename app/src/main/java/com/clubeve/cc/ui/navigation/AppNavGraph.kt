@@ -124,6 +124,9 @@ fun AppNavGraph(
                             popUpTo(0) { inclusive = true }
                         }
                     },
+                    onScanEvent = { eventId ->
+                        navController.navigate(Screen.Scanner.createRoute(eventId))
+                    },
                     vm = homeViewModel
                 )
             }
