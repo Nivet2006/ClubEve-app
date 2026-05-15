@@ -34,6 +34,13 @@ data class PrProfile(
     val department: String = ""
 )
 
+/** A single rejection reason entry stored in the `rejection_data` JSON column. */
+@Serializable
+data class RejectionEntry(
+    val field: String,
+    val reason: String
+)
+
 // ── UI state ──────────────────────────────────────────────────────────────────
 
 data class FacultyEventDetailUiState(
@@ -96,14 +103,14 @@ class FacultyEventDetailViewModel : ViewModel() {
                 if (!approve) {
                     client.from("events").update({
                         set("approval_status", ApprovalStatus.REJECTED)
-                        set("rejection_data", listOf(mapOf("field" to "General", "reason" to remarks)))
+                        set("rejection_data", listOf(RejectionEntry(field = "General", reason = remarks)))
                     }) {
                         filter { eq("id", eventId) }
                     }
                 } else {
                     client.from("events").update({
                         set("approval_status", newStatus)
-                        set("rejection_data", emptyList<Any>())
+                        set("rejection_data", emptyList<RejectionEntry>())
                     }) {
                         filter { eq("id", eventId) }
                     }
